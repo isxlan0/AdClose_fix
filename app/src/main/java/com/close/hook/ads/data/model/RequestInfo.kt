@@ -6,6 +6,7 @@ import kotlinx.parcelize.IgnoredOnParcel
 
 @Parcelize
 data class RequestInfo(
+    var requestId: String,
     var appName: String,
     var packageName: String,
     var request: String,

@@ -62,9 +62,17 @@ class RequestViewModel(application: Application) : AndroidViewModel(application)
 
     fun updateRequestList(item: RequestInfo) {
         _requestList.update { currentList ->
-            val newList = ArrayList<RequestInfo>(currentList.size + 1)
-            newList.add(item)
-            newList.addAll(currentList)
+            val existingIndex = currentList.indexOfFirst { it.requestId == item.requestId }
+            val newList = ArrayList<RequestInfo>(currentList.size + if (existingIndex == -1) 1 else 0)
+
+            if (existingIndex == -1) {
+                newList.add(item)
+                newList.addAll(currentList)
+            } else {
+                newList.addAll(currentList)
+                newList[existingIndex] = item
+            }
+
             if (newList.size > MAX_REQUEST_LIST_SIZE) {
                 newList.subList(MAX_REQUEST_LIST_SIZE, newList.size).clear()
             }
@@ -92,7 +100,7 @@ class RequestViewModel(application: Application) : AndroidViewModel(application)
 
         _requestList.update { currentList ->
             currentList.map {
-                if (it.timestamp == request.timestamp) it.copy(isBlocked = newIsBlocked) else it
+                if (it.requestId == request.requestId) it.copy(isBlocked = newIsBlocked) else it
             }
         }
     }

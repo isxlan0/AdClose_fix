@@ -35,8 +35,6 @@ typedef ssize_t (*type_sendto)(int, const void *, size_t, int, const struct sock
 typedef ssize_t (*type_recvfrom)(int, void *, size_t, int, struct sockaddr *, socklen_t *);
 typedef ssize_t (*type_write)(int, const void *, size_t);
 typedef ssize_t (*type_read)(int, void *, size_t);
-typedef int (*type_SSL_write)(void *ssl, const void *buf, int num);
-typedef int (*type_SSL_read)(void *ssl, void *buf, int num);
 
 static type_send orig_send;
 static type_recv orig_recv;
@@ -44,8 +42,6 @@ static type_sendto orig_sendto;
 static type_recvfrom orig_recvfrom;
 static type_write orig_write;
 static type_read orig_read;
-static type_SSL_write orig_SSL_write;
-static type_SSL_read orig_SSL_read;
 
 // --- 堆栈回溯 ---
 
@@ -129,7 +125,7 @@ bool is_network_socket(int fd) {
 }
 
 // 回调核心
-bool callback_kotlin(int id, bool is_write, const void *buf, size_t len, bool is_ssl) {
+bool callback_kotlin(jlong id, bool is_write, const void *buf, size_t len, bool is_ssl) {
     if (gJvm == nullptr || gNativeRequestHookClass == nullptr || buf == nullptr) return false;
     if (len <= 0 || len > 100 * 1024 * 1024) return false;
 
@@ -211,21 +207,6 @@ ssize_t hook_read(int fd, void *buf, size_t count) {
     return ret;
 }
 
-int hook_SSL_write(void *ssl, const void *buf, int num) {
-    if (buf != nullptr && num > 0) {
-        callback_kotlin((int)(long)ssl, true, buf, num, true);
-    }
-    return orig_SSL_write(ssl, buf, num);
-}
-
-int hook_SSL_read(void *ssl, void *buf, int num) {
-    int ret = orig_SSL_read(ssl, buf, num);
-    if (ret > 0 && buf != nullptr) {
-        callback_kotlin((int)(long)ssl, false, buf, ret, true);
-    }
-    return ret;
-}
-
 // --- Init ---
 
 void hook_func(const char *lib_name, const char *sym_name, void *hook_func, void **orig_func) {
@@ -247,7 +228,7 @@ Java_com_close_hook_ads_hook_gc_network_NativeRequestHook_initNativeHook(JNIEnv 
     if (!clazz) return;
     gNativeRequestHookClass = (jclass) env->NewGlobalRef(clazz);
     
-    gOnNativeDataMethod = env->GetStaticMethodID(clazz, "onNativeData", "(IZ[BLjava/lang/String;Ljava/lang/String;Z)Z");
+    gOnNativeDataMethod = env->GetStaticMethodID(clazz, "onNativeData", "(JZ[BLjava/lang/String;Ljava/lang/String;Z)Z");
     if (!gOnNativeDataMethod) return;
 
     shadowhook_init(SHADOWHOOK_MODE_UNIQUE, true);
@@ -259,17 +240,4 @@ Java_com_close_hook_ads_hook_gc_network_NativeRequestHook_initNativeHook(JNIEnv 
     hook_func("libc.so", "recvfrom", (void*)hook_recvfrom, (void**)&orig_recvfrom);
     hook_func("libc.so", "write", (void*)hook_write, (void**)&orig_write);
     hook_func("libc.so", "read", (void*)hook_read, (void**)&orig_read);
-
-    // Hook SSL
-    const char* ssl_libs[] = {
-        "libssl.so", "libconscrypt_jni.so",
-        "libttboringssl.so", "libflutter.so", nullptr
-    };
-
-    for (int i = 0; ssl_libs[i] != nullptr; i++) {
-        hook_func(ssl_libs[i], "SSL_write", (void*)hook_SSL_write, (void**)&orig_SSL_write);
-        hook_func(ssl_libs[i], "SSL_read", (void*)hook_SSL_read, (void**)&orig_SSL_read);
-        hook_func(ssl_libs[i], "NativeCrypto_SSL_write", (void*)hook_SSL_write, (void**)&orig_SSL_write);
-        hook_func(ssl_libs[i], "NativeCrypto_SSL_read", (void*)hook_SSL_read, (void**)&orig_SSL_read);
-    }
 }

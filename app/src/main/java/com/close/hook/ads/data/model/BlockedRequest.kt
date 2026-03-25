@@ -5,6 +5,7 @@ import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class BlockedRequest(
+    var requestId: String,
     var requestType: String,
     var requestValue: String,
     var method: String?,

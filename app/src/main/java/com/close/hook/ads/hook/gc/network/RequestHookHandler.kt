@@ -9,20 +9,18 @@ import android.webkit.WebViewClient
 import com.close.hook.ads.data.model.BlockedRequest
 import com.close.hook.ads.hook.util.HookUtil
 import com.close.hook.ads.hook.util.StringFinderKit
-import com.close.hook.ads.hook.util.TeeInputStream
 import com.close.hook.ads.preference.HookPrefs
+import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.IOException
-import java.io.InputStream
-import java.lang.reflect.Field
-import java.net.HttpURLConnection
+import java.lang.reflect.Method
 import java.net.InetAddress
 import java.net.URL
 import java.nio.ByteBuffer
-import javax.net.ssl.HttpsURLConnection
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.net.ssl.SSLEngineResult
 import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLParameters
@@ -31,15 +29,10 @@ internal object RequestHookHandler {
 
     private const val LOG_PREFIX = "[RequestHookHandler] "
     private lateinit var applicationContext: Context
-
-    private val okhttp3ResponseBodyClass: Class<*>? by lazy {
-        try {
-            XposedHelpers.findClass("okhttp3.ResponseBody", applicationContext.classLoader)
-        } catch (e: Throwable) {
-            XposedBridge.log("$LOG_PREFIX ${e.message}")
-            null
-        }
-    }
+    private val isInitialized = AtomicBoolean(false)
+    private val isOkHttpFallbackScheduled = AtomicBoolean(false)
+    private val hookedOkHttpMethods = ConcurrentHashMap.newKeySet<String>()
+    private val okHttpRequestIds = ConcurrentHashMap<Int, String>()
 
     private val okioBufferClass: Class<*>? by lazy {
         try {
@@ -57,24 +50,11 @@ internal object RequestHookHandler {
             XposedHelpers.findClass("com.ttnet.org.chromium.net.urlconnection.CronetHttpURLConnection", applicationContext.classLoader)
         } catch (e: Throwable) { null }
     }
-    private val urlResponseInfoCls: Class<*>? by lazy {
-        try {
-            XposedHelpers.findClass("com.ttnet.org.chromium.net.UrlResponseInfo", applicationContext.classLoader)
-        } catch (e: Throwable) { null }
-    }
-    private val urlRequestCls: Class<*>? by lazy {
-        try {
-            XposedHelpers.findClass("com.ttnet.org.chromium.net.UrlRequest", applicationContext.classLoader)
-        } catch (e: Throwable) { null }
-    }
-    private val cronetInputStreamCls: Class<*>? by lazy {
-        try {
-            XposedHelpers.findClass("com.ttnet.org.chromium.net.urlconnection.CronetInputStream", applicationContext.classLoader)
-        } catch (e: Throwable) { null }
-    }
 
     fun init(context: Context) {
+        if (isInitialized.get()) return
         applicationContext = context
+        if (!isInitialized.compareAndSet(false, true)) return
         setupDNSRequestHook()
         setupSocketHook() // HTTP/1.1
         setupConscryptEngineHook() // HTTPS over HTTP/1.1
@@ -82,6 +62,17 @@ internal object RequestHookHandler {
         // setupProtocolDowngradeHook()
         setupWebViewRequestHook()
         setupCronetRequestHook() // ByteDance
+    }
+
+    private fun handleParsedRequest(key: Long, param: XC_MethodHook.MethodHookParam? = null) {
+        val requestInfo = RequestHook.pendingRequests[key] ?: return
+        if (!RequestHook.markPendingRequestAnnounced(requestInfo.requestId)) {
+            return
+        }
+        if (RequestHook.checkShouldBlockRequest(requestInfo)) {
+            param?.throwable = IOException("Request blocked by AdClose")
+            RequestHook.releaseConnection(key)
+        }
     }
 
     private fun setupDNSRequestHook() {
@@ -114,18 +105,30 @@ internal object RequestHookHandler {
                 "socketWrite0",
                 "before"
             ) { param ->
-                val socket = XposedHelpers.getObjectField(param.thisObject, "socket")
-                if (socket is SSLSocket) return@hookAllMethods
+                try {
+                    val socket = XposedHelpers.getObjectField(param.thisObject, "socket") ?: return@hookAllMethods
+                    if (socket is SSLSocket) return@hookAllMethods
 
-                val bytes = param.args[1] as ByteArray
-                val offset = param.args[2] as Int
-                val len = param.args[3] as Int
-                if (len <= 0) return@hookAllMethods
+                    val bytes = param.args.getOrNull(1) as? ByteArray ?: return@hookAllMethods
+                    val offset = param.args.getOrNull(2) as? Int ?: 0
+                    val len = param.args.getOrNull(3) as? Int ?: -1
+                    if (len <= 0) return@hookAllMethods
 
-                val key = System.identityHashCode(socket)
-                val buffer = RequestHook.requestBuffers.getOrPut(key) { ByteArrayOutputStream() }
-                buffer.write(bytes, offset, len)
-                RequestHook.processRequestBuffer(key, isHttps = false)
+                    val key = RequestHook.javaSocketKey(socket)
+                    RequestHook.appendToBuffer(
+                        key = key,
+                        buffers = RequestHook.requestBuffers,
+                        bytes = bytes,
+                        offset = offset,
+                        len = len,
+                        bufferLabel = "socket request"
+                    ) ?: return@hookAllMethods
+
+                    RequestHook.processRequestBuffer(key, isHttps = false)
+                    handleParsedRequest(key, param)
+                } catch (e: Throwable) {
+                    XposedBridge.log("$LOG_PREFIX socketWrite0 hook error: ${e.message}")
+                }
             }
 
             HookUtil.hookAllMethods(
@@ -133,17 +136,29 @@ internal object RequestHookHandler {
                 "socketRead0",
                 "after"
             ) { param ->
-                val socket = XposedHelpers.getObjectField(param.thisObject, "socket")
-                if (socket is SSLSocket) return@hookAllMethods
+                try {
+                    val socket = XposedHelpers.getObjectField(param.thisObject, "socket") ?: return@hookAllMethods
+                    if (socket is SSLSocket) return@hookAllMethods
 
-                val bytes = param.args[1] as ByteArray
-                val len = param.result as? Int ?: -1
-                if (len <= 0) return@hookAllMethods
+                    val bytes = param.args.getOrNull(1) as? ByteArray ?: return@hookAllMethods
+                    val offset = param.args.getOrNull(2) as? Int ?: 0
+                    val len = param.result as? Int ?: -1
+                    if (len <= 0) return@hookAllMethods
 
-                val key = System.identityHashCode(socket)
-                val buffer = RequestHook.responseBuffers.getOrPut(key) { ByteArrayOutputStream() }
-                buffer.write(bytes, 0, len)
-                RequestHook.processResponseBuffer(key, param)
+                    val key = RequestHook.javaSocketKey(socket)
+                    RequestHook.appendToBuffer(
+                        key = key,
+                        buffers = RequestHook.responseBuffers,
+                        bytes = bytes,
+                        offset = offset,
+                        len = len,
+                        bufferLabel = "socket response"
+                    ) ?: return@hookAllMethods
+
+                    RequestHook.processResponseBuffer(key, param)
+                } catch (e: Throwable) {
+                    XposedBridge.log("$LOG_PREFIX socketRead0 hook error: ${e.message}")
+                }
             }
         } catch (e: Throwable) {
             XposedBridge.log("$LOG_PREFIX Error setting up plain socket hook: ${e.message}")
@@ -193,16 +208,23 @@ internal object RequestHookHandler {
                 try {
                     val srcBuffer = param.args[0] as ByteBuffer
                     if (srcBuffer.hasRemaining()) {
-                        val key = System.identityHashCode(param.thisObject)
-                        val buffer = RequestHook.requestBuffers.getOrPut(key) { ByteArrayOutputStream() }
+                        val key = RequestHook.javaSslKey(param.thisObject)
 
                         val position = srcBuffer.position()
                         val bytes = ByteArray(srcBuffer.remaining())
                         srcBuffer.get(bytes)
                         srcBuffer.position(position)
 
-                        buffer.write(bytes)
+                        RequestHook.appendToBuffer(
+                            key = key,
+                            buffers = RequestHook.requestBuffers,
+                            bytes = bytes,
+                            offset = 0,
+                            len = bytes.size,
+                            bufferLabel = "ssl request"
+                        ) ?: return@findAndHookMethod
                         RequestHook.processRequestBuffer(key, isHttps = true)
+                        handleParsedRequest(key, param)
                     }
                 } catch (e: Throwable) {
                     XposedBridge.log("$LOG_PREFIX ConscryptEngine.wrap hook error: ${e.message}")
@@ -221,8 +243,7 @@ internal object RequestHookHandler {
                     val bytesProduced = result.bytesProduced()
 
                     if (bytesProduced > 0) {
-                        val key = System.identityHashCode(param.thisObject)
-                        val buffer = RequestHook.responseBuffers.getOrPut(key) { ByteArrayOutputStream() }
+                        val key = RequestHook.javaSslKey(param.thisObject)
 
                         val position = dstBuffer.position()
                         val start = position - bytesProduced
@@ -231,7 +252,14 @@ internal object RequestHookHandler {
                            bytes[i] = dstBuffer.get(start + i)
                         }
 
-                        buffer.write(bytes)
+                        RequestHook.appendToBuffer(
+                            key = key,
+                            buffers = RequestHook.responseBuffers,
+                            bytes = bytes,
+                            offset = 0,
+                            len = bytes.size,
+                            bufferLabel = "ssl response"
+                        ) ?: return@findAndHookMethod
                         RequestHook.processResponseBuffer(key, param)
                     }
                 } catch (e: Throwable) {
@@ -244,84 +272,144 @@ internal object RequestHookHandler {
     }
 
     fun setupOkHttpRequestHook() {
-        // okhttp3.Call.execute
-        hookOkHttpMethod("setupOkHttpRequestHook_execute", "Already Executed", "execute")
-        // okhttp3.internal.http.RetryAndFollowUpInterceptor.intercept
-        hookOkHttpMethod("setupOkHttp2RequestHook_intercept", "Canceled", "intercept")
+        hookKnownOkHttpMethod("okhttp3.RealCall", "execute")
+        hookKnownOkHttpMethod("okhttp3.internal.http.RetryAndFollowUpInterceptor", "intercept")
+        scheduleOkHttpFallbackHooking()
     }
 
-    private fun hookOkHttpMethod(cacheKeySuffix: String, methodDescription: String, methodName: String) {
+    private fun hookKnownOkHttpMethod(className: String, methodName: String) {
+        val clazz = XposedHelpers.findClassIfExists(className, applicationContext.classLoader) ?: return
+        clazz.declaredMethods
+            .filter { it.name == methodName }
+            .forEach { hookOkHttpMethod(it, className) }
+    }
+
+    private fun scheduleOkHttpFallbackHooking() {
+        if (!isOkHttpFallbackScheduled.compareAndSet(false, true)) return
+
+        Thread({
+            try {
+                hookOkHttpMethodsByString("setupOkHttpRequestHook_execute", "Already Executed", "execute")
+                hookOkHttpMethodsByString("setupOkHttp2RequestHook_intercept", "Canceled", "intercept")
+            } catch (e: Throwable) {
+                XposedBridge.log("$LOG_PREFIX OkHttp fallback hook scheduling failed: ${e.message}")
+            }
+        }, "AdClose-OkHttpHook").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+    private fun hookOkHttpMethodsByString(cacheKeySuffix: String, methodDescription: String, methodName: String) {
         val cacheKey = "${applicationContext.packageName}:$cacheKeySuffix"
         StringFinderKit.findMethodsWithString(cacheKey, methodDescription, methodName)?.forEach { methodData ->
             try {
-                val method = methodData.getMethodInstance(applicationContext.classLoader)
-                XposedBridge.log("$LOG_PREFIX setupOkHttpRequestHook $methodData")
-                HookUtil.hookMethod(method, "after") { param ->
-                    try {
-                        val response = param.result ?: return@hookMethod
-                        val request = XposedHelpers.callMethod(response, "request")
-                        val url = URL(XposedHelpers.callMethod(request, "url").toString())
-                        val stackTrace = HookUtil.getFormattedStackTrace()
-
-                        val requestBodyBytes = try {
-                            XposedHelpers.callMethod(request, "body")?.let { requestBody ->
-                                val bufferClass = okioBufferClass ?: return@let null
-                                val bufferInstance = bufferClass.getDeclaredConstructor().newInstance()
-                                XposedHelpers.callMethod(requestBody, "writeTo", bufferInstance)
-                                XposedHelpers.callMethod(bufferInstance, "readByteArray") as? ByteArray
-                            }
-                        } catch (e: Throwable) {
-                            // XposedBridge.log("$LOG_PREFIX OkHttp request body reading failed (likely due to obfuscation): ${e.message}")
-                            null
-                        }
-
-                        var responseBodyBytes: ByteArray? = null
-                        var mimeTypeWithEncoding: String? = null
-
-                        if (HookPrefs.getBoolean(HookPrefs.KEY_COLLECT_RESPONSE_BODY, false)) {
-                            try {
-                                val originalBody = XposedHelpers.callMethod(response, "body")
-                                if (originalBody != null) {
-                                    val mediaType = XposedHelpers.callMethod(originalBody, "contentType")
-                                    val responseContentType = mediaType?.toString()
-                                    responseBodyBytes = XposedHelpers.callMethod(originalBody, "bytes") as? ByteArray
-
-                                    val contentEncoding = XposedHelpers.callMethod(response, "header", "Content-Encoding") as? String
-
-                                    mimeTypeWithEncoding = if (!contentEncoding.isNullOrEmpty()) {
-                                        "$responseContentType; encoding=$contentEncoding"
-                                    } else {
-                                        responseContentType
-                                    }
-
-                                    if (responseBodyBytes != null && okhttp3ResponseBodyClass != null) {
-                                        val newBody = XposedHelpers.callStaticMethod(okhttp3ResponseBodyClass, "create", mediaType, responseBodyBytes)
-                                        XposedHelpers.setObjectField(response, "body", newBody)
-                                    }
-                                }
-                            } catch (e: Throwable) {
-                                XposedBridge.log("$LOG_PREFIX OkHttp response body reading failed: ${e.message}")
-                            }
-                        }
-
-                        val info = buildOkHttpRequest(
-                            url, " OKHTTP", request, response,
-                            requestBodyBytes,
-                            responseBodyBytes, mimeTypeWithEncoding, stackTrace
-                        )
-                        if (RequestHook.checkShouldBlockRequest(info)) {
-                            param.throwable = IOException("Request blocked by AdClose: ${url.host}")
-                        }
-                    } catch (e: IOException) {
-                        param.throwable = e
-                    } catch (e: Throwable) {
-                        XposedBridge.log("$LOG_PREFIX OkHttp hook error ($methodName): ${e.message}")
-                    }
-                }
+                hookOkHttpMethod(methodData.getMethodInstance(applicationContext.classLoader), "DexKit:$cacheKeySuffix")
             } catch (e: Exception) {
                 XposedBridge.log("$LOG_PREFIX Error hooking OkHttp method: $methodData, ${e.message}")
             }
         }
+    }
+
+    private fun hookOkHttpMethod(method: Method, source: String) {
+        val signature = method.toGenericString()
+        if (!hookedOkHttpMethods.add(signature)) {
+            return
+        }
+
+        XposedBridge.log("$LOG_PREFIX Hooked OkHttp method from $source: $signature")
+        HookUtil.hookMethod(method, "after") { param ->
+            handleOkHttpHook(method.name, param)
+        }
+    }
+
+    private fun handleOkHttpHook(methodName: String, param: XC_MethodHook.MethodHookParam) {
+        try {
+            val response = param.result ?: return
+            val request = XposedHelpers.callMethod(response, "request")
+            val url = URL(XposedHelpers.callMethod(request, "url").toString())
+            val stackTrace = HookUtil.getFormattedStackTrace()
+            val requestBodyBytes = readOkHttpRequestBody(request)
+            val (responseBodyBytes, mimeTypeWithEncoding) = readOkHttpResponseBody(response)
+
+            val info = buildOkHttpRequest(
+                url = url,
+                requestFrameworkType = " OKHTTP",
+                request = request,
+                response = response,
+                requestBody = requestBodyBytes,
+                responseBody = responseBodyBytes,
+                responseBodyContentType = mimeTypeWithEncoding,
+                stack = stackTrace
+            )
+
+            if (RequestHook.checkShouldBlockRequest(info)) {
+                param.throwable = IOException("Request blocked by AdClose: ${url.host}")
+            }
+        } catch (e: IOException) {
+            param.throwable = e
+        } catch (e: Throwable) {
+            XposedBridge.log("$LOG_PREFIX OkHttp hook error ($methodName): ${e.message}")
+        }
+    }
+
+    private fun readOkHttpRequestBody(request: Any): ByteArray? {
+        return try {
+            XposedHelpers.callMethod(request, "body")?.let { requestBody ->
+                val bufferClass = okioBufferClass ?: return@let null
+                val bufferInstance = bufferClass.getDeclaredConstructor().newInstance()
+                XposedHelpers.callMethod(requestBody, "writeTo", bufferInstance)
+                val size = XposedHelpers.callMethod(bufferInstance, "size") as? Long ?: 0L
+                when {
+                    size <= 0L -> null
+                    size > RequestHook.MAX_CAPTURED_BODY_BYTES.toLong() ->
+                        XposedHelpers.callMethod(
+                            bufferInstance,
+                            "readByteArray",
+                            RequestHook.MAX_CAPTURED_BODY_BYTES.toLong()
+                        ) as? ByteArray
+                    else -> XposedHelpers.callMethod(bufferInstance, "readByteArray") as? ByteArray
+                }
+            }
+        } catch (e: Throwable) {
+            null
+        }
+    }
+
+    private fun readOkHttpResponseBody(response: Any): Pair<ByteArray?, String?> {
+        if (!HookPrefs.getBoolean(HookPrefs.KEY_COLLECT_RESPONSE_BODY, false)) {
+            return null to null
+        }
+
+        return try {
+            val originalBody = XposedHelpers.callMethod(response, "body") ?: return null to null
+            val mediaType = XposedHelpers.callMethod(originalBody, "contentType")
+            val responseContentType = mediaType?.toString()
+            val peekedBody = XposedHelpers.callMethod(
+                response,
+                "peekBody",
+                RequestHook.MAX_CAPTURED_BODY_BYTES.toLong()
+            )
+            val responseBodyBytes = XposedHelpers.callMethod(peekedBody, "bytes") as? ByteArray
+            val contentEncoding = XposedHelpers.callMethod(response, "header", "Content-Encoding") as? String
+
+            responseBodyBytes to if (!contentEncoding.isNullOrEmpty()) {
+                "$responseContentType; encoding=$contentEncoding"
+            } else {
+                responseContentType
+            }
+        } catch (e: Throwable) {
+            XposedBridge.log("$LOG_PREFIX OkHttp response body reading failed: ${e.message}")
+            null to null
+        }
+    }
+
+    private fun getOkHttpRequestId(request: Any): String {
+        if (okHttpRequestIds.size > 4096) {
+            okHttpRequestIds.clear()
+        }
+        val requestKey = System.identityHashCode(request)
+        return okHttpRequestIds.getOrPut(requestKey) { RequestHook.nextRequestId("okhttp") }
     }
 
     private fun buildOkHttpRequest(
@@ -338,6 +426,7 @@ internal object RequestHookHandler {
             val responseHeaders = XposedHelpers.callMethod(response, "headers")?.toString()
             val formattedUrl = RequestHook.formatUrlWithoutQuery(url)
             BlockedRequest(
+                requestId = getOkHttpRequestId(request),
                 requestType = requestFrameworkType,
                 requestValue = formattedUrl,
                 method = method,
@@ -385,11 +474,6 @@ internal object RequestHookHandler {
                 
                 if (processWebRequest(request)) {
                     param.result = emptyWebResponse
-                    return@hookAllMethods
-                }
-
-                if (HookPrefs.getBoolean(HookPrefs.KEY_COLLECT_RESPONSE_BODY, false)) {
-                    sendParallelRequestForLogging(request)
                 }
             },
             classLoader
@@ -409,37 +493,6 @@ internal object RequestHookHandler {
         )
     }
 
-    private fun sendParallelRequestForLogging(request: WebResourceRequest) {
-        val url = request.url
-        if (url == null || (url.scheme != "http" && url.scheme != "https")) {
-            return
-        }
-
-        Thread {
-            try {
-                val urlConnection = URL(request.url.toString()).openConnection() as HttpURLConnection
-                urlConnection.requestMethod = request.method
-                
-                request.requestHeaders.forEach { (key, value) ->
-                    urlConnection.setRequestProperty(key, value)
-                }
-                
-                urlConnection.setRequestProperty("X-AdClose-Proxy", "true")
-
-                urlConnection.connect()
-                
-                val inputStream = try { urlConnection.inputStream } catch (e: IOException) { urlConnection.errorStream }
-                
-                inputStream?.use { input ->
-                    val buffer = ByteArrayOutputStream()
-                    TeeInputStream(input, buffer).use { it.readBytes() }
-                }
-            } catch (e: Throwable) {
-                XposedBridge.log("$LOG_PREFIX Error in parallel WebView request: ${e.message}")
-            }
-        }.start()
-    }
-
     private fun processWebRequest(request: Any?): Boolean {
         try {
             val webResourceRequest = request as? WebResourceRequest ?: return false
@@ -452,6 +505,7 @@ internal object RequestHookHandler {
             val formattedUrl = RequestHook.formatUrlWithoutQuery(Uri.parse(urlString))
             
             val info = BlockedRequest(
+                requestId = RequestHook.nextRequestId("web"),
                 requestType = " Web",
                 requestValue = formattedUrl,
                 method = webResourceRequest.method,
@@ -485,6 +539,32 @@ internal object RequestHookHandler {
         }
     }
 
+    private fun readCronetBufferedBody(streamObject: Any?): ByteArray? {
+        if (!HookPrefs.getBoolean(HookPrefs.KEY_COLLECT_RESPONSE_BODY, false)) {
+            return null
+        }
+
+        return try {
+            val buffer = XposedHelpers.getObjectField(streamObject, "mBuffer") as? ByteBuffer ?: return null
+            val duplicate = buffer.asReadOnlyBuffer()
+            val readable = when {
+                duplicate.position() > 0 -> duplicate.position()
+                duplicate.limit() > 0 -> duplicate.limit()
+                else -> duplicate.remaining()
+            }.coerceAtMost(RequestHook.MAX_CAPTURED_BODY_BYTES)
+
+            if (readable <= 0) {
+                return null
+            }
+
+            duplicate.position(0)
+            duplicate.limit(readable)
+            ByteArray(readable).also { duplicate.get(it) }
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
     private fun setupCronetRequestHook() {
         try {
             HookUtil.hookAllMethods(
@@ -497,11 +577,9 @@ internal object RequestHookHandler {
 
                     val requestObject = XposedHelpers.getObjectField(thisObject, "mRequest")
                     val responseInfoObject = XposedHelpers.getObjectField(thisObject, "mResponseInfo")
-                    val inputStreamObject = XposedHelpers.getObjectField(thisObject, "mInputStream")
 
                     if (requestObject == null || responseInfoObject == null) return@hookAllMethods
 
-                    val initialUrl = XposedHelpers.getObjectField(requestObject, "mInitialUrl") as? String
                     val method = XposedHelpers.getObjectField(requestObject, "mInitialMethod") as? String
                     val requestHeaders = XposedHelpers.getObjectField(requestObject, "mRequestHeaders")?.toString()
 
@@ -512,38 +590,21 @@ internal object RequestHookHandler {
                     val responseHeaders = responseHeadersMap?.toString() ?: ""
                     val negotiatedProtocol = XposedHelpers.callMethod(responseInfoObject, "getNegotiatedProtocol") as? String
                     
-                    var responseBody: ByteArray? = null
-                    var responseContentType: String? = null
-
-                    if (HookPrefs.getBoolean(HookPrefs.KEY_COLLECT_RESPONSE_BODY, false) && httpStatusCode in 200..399) {
-                        inputStreamObject?.let { streamObj ->
-                            try {
-                                val buffer = XposedHelpers.getObjectField(streamObj, "mBuffer") as? ByteBuffer
-                                if (buffer != null && buffer.hasArray()) {
-                                    responseBody = buffer.array()
-                                }
-                            } catch (e: Throwable) {
-                            }
-
-                            if (responseBody == null) {
-                                (streamObj as? InputStream)?.use { inputStream ->
-                                    val out = ByteArrayOutputStream()
-                                    TeeInputStream(inputStream, out).use { it.readBytes() }
-                                    responseBody = out.toByteArray()
-                                    
-                                    try {
-                                        XposedHelpers.setObjectField(streamObj, "mBuffer", ByteBuffer.wrap(responseBody))
-                                    } catch (ignored: Throwable) {}
-                                }
-                            }
-                            responseContentType = responseHeadersMap?.get("Content-Type")?.firstOrNull()
-                        }
+                    val responseContentType = responseHeadersMap?.entries
+                        ?.firstOrNull { it.key.equals("Content-Type", ignoreCase = true) }
+                        ?.value
+                        ?.firstOrNull()
+                    val responseBody = if (httpStatusCode in 200..399) {
+                        readCronetBufferedBody(XposedHelpers.getObjectField(thisObject, "mInputStream"))
+                    } else {
+                        null
                     }
 
                     val stackTrace = HookUtil.getFormattedStackTrace()
                     val formattedUrl = finalUrl?.let { RequestHook.formatUrlWithoutQuery(Uri.parse(it)) }
 
                     val info = BlockedRequest(
+                        requestId = RequestHook.nextRequestId("cronet"),
                         requestType = " CRONET/$negotiatedProtocol",
                         requestValue = formattedUrl ?: "",
                         method = method,

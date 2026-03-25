@@ -24,17 +24,26 @@ import java.net.URL
 import java.net.URLDecoder
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 object RequestHook {
 
     private const val LOG_PREFIX = "[RequestHook] "
+    private const val MAX_STREAM_BUFFER_BYTES = 512 * 1024
+    internal const val MAX_CAPTURED_BODY_BYTES = 256 * 1024
+    private const val KEY_SCOPE_JAVA_SOCKET = 0x1000_0000_0000_0000L
+    private const val KEY_SCOPE_JAVA_SSL = 0x2000_0000_0000_0000L
+    private const val KEY_SCOPE_NATIVE_SOCKET = 0x3000_0000_0000_0000L
+    private const val KEY_SCOPE_NATIVE_SSL = 0x4000_0000_0000_0000L
+    private const val KEY_VALUE_MASK = 0x0FFF_FFFF_FFFF_FFFFL
     private val UTF8: Charset = StandardCharsets.UTF_8
 
     internal lateinit var applicationContext: Context
 
-    private val sentRequestsCache: ConcurrentHashMap<String, Boolean> = ConcurrentHashMap()
+    private val requestIdGenerator = AtomicLong(0)
+    private val announcedPendingRequestIds = ConcurrentHashMap.newKeySet<String>()
 
     private data class ParsingState(
         var isHeaderParsed: Boolean = false,
@@ -42,12 +51,12 @@ object RequestHook {
         var isChunked: Boolean = false,
         var headerSize: Int = 0
     )
-    private val requestParsingStates = ConcurrentHashMap<Int, ParsingState>()
-    private val responseParsingStates = ConcurrentHashMap<Int, ParsingState>()
+    private val requestParsingStates = ConcurrentHashMap<Long, ParsingState>()
+    private val responseParsingStates = ConcurrentHashMap<Long, ParsingState>()
 
-    internal val requestBuffers = ConcurrentHashMap<Int, ByteArrayOutputStream>()
-    internal val responseBuffers = ConcurrentHashMap<Int, ByteArrayOutputStream>()
-    internal val pendingRequests = ConcurrentHashMap<Int, BlockedRequest>()
+    internal val requestBuffers = ConcurrentHashMap<Long, ByteArrayOutputStream>()
+    internal val responseBuffers = ConcurrentHashMap<Long, ByteArrayOutputStream>()
+    internal val pendingRequests = ConcurrentHashMap<Long, BlockedRequest>()
     private val headerEndMarker = "\r\n\r\n".toByteArray()
 
     private val URL_CONTENT_URI: Uri = Uri.Builder()
@@ -66,13 +75,55 @@ object RequestHook {
         applicationContext = context
     }
 
-    internal fun releaseConnection(key: Int) {
+    private fun scopedKey(scope: Long, rawValue: Long): Long = scope or (rawValue and KEY_VALUE_MASK)
+
+    internal fun javaSocketKey(connection: Any): Long =
+        scopedKey(KEY_SCOPE_JAVA_SOCKET, System.identityHashCode(connection).toLong())
+
+    internal fun javaSslKey(connection: Any): Long =
+        scopedKey(KEY_SCOPE_JAVA_SSL, System.identityHashCode(connection).toLong())
+
+    internal fun nativeKey(rawId: Long, isSsl: Boolean): Long =
+        scopedKey(if (isSsl) KEY_SCOPE_NATIVE_SSL else KEY_SCOPE_NATIVE_SOCKET, rawId)
+
+    internal fun nextRequestId(prefix: String): String =
+        "$prefix-${System.currentTimeMillis()}-${requestIdGenerator.incrementAndGet()}"
+
+    internal fun appendToBuffer(
+        key: Long,
+        buffers: ConcurrentHashMap<Long, ByteArrayOutputStream>,
+        bytes: ByteArray,
+        offset: Int,
+        len: Int,
+        bufferLabel: String
+    ): ByteArrayOutputStream? {
+        if (offset < 0 || len <= 0 || offset > bytes.size || bytes.size - offset < len) {
+            return null
+        }
+
+        val buffer = buffers.getOrPut(key) { ByteArrayOutputStream(minOf(len, 8 * 1024)) }
+        val newSize = buffer.size() + len
+        if (newSize > MAX_STREAM_BUFFER_BYTES) {
+            XposedBridge.log("$LOG_PREFIX Drop oversized $bufferLabel capture, key=$key size=$newSize")
+            releaseConnection(key)
+            return null
+        }
+
+        buffer.write(bytes, offset, len)
+        return buffer
+    }
+
+    internal fun releaseConnection(key: Long) {
+        pendingRequests[key]?.requestId?.let { announcedPendingRequestIds.remove(it) }
         requestBuffers.remove(key)
         responseBuffers.remove(key)
         requestParsingStates.remove(key)
         responseParsingStates.remove(key)
         pendingRequests.remove(key)
     }
+
+    internal fun markPendingRequestAnnounced(requestId: String): Boolean =
+        announcedPendingRequestIds.add(requestId)
 
     internal fun formatUrlWithoutQuery(urlObject: Any?): String {
         return try {
@@ -152,6 +203,7 @@ object RequestHook {
         if (fullAddress.isNullOrEmpty()) return false
 
         val info = BlockedRequest(
+            requestId = nextRequestId("dns"),
             requestType = " DNS",
             requestValue = host,
             method = null,
@@ -170,7 +222,7 @@ object RequestHook {
         return checkShouldBlockRequest(info)
     }
 
-    internal fun processRequestBuffer(key: Int, isHttps: Boolean) {
+    internal fun processRequestBuffer(key: Long, isHttps: Boolean) {
         val bufferStream = requestBuffers[key] ?: return
         val state = requestParsingStates.getOrPut(key) { ParsingState() }
 
@@ -193,7 +245,12 @@ object RequestHook {
             state.contentLength = parseContentLength(headerString)
             
             if (buffer.size >= state.headerSize + state.contentLength) {
-                val bodyBytes = if (state.contentLength > 0) buffer.copyOfRange(state.headerSize, state.headerSize + state.contentLength) else null
+                val bodyBytes = if (state.contentLength > 0) {
+                    buffer.copyOfRange(
+                        state.headerSize,
+                        minOf(state.headerSize + state.contentLength, state.headerSize + MAX_CAPTURED_BODY_BYTES)
+                    )
+                } else null
                 buildHttpRequest(key, headerString, bodyBytes, isHttps)
                 
                 cleanBuffer(bufferStream, buffer, state.headerSize + state.contentLength)
@@ -202,7 +259,7 @@ object RequestHook {
         }
     }
 
-    internal fun processResponseBuffer(key: Int, param: XC_MethodHook.MethodHookParam?): Boolean {
+    internal fun processResponseBuffer(key: Long, param: XC_MethodHook.MethodHookParam?): Boolean {
         val bufferStream = responseBuffers[key] ?: return false
         val state = responseParsingStates.getOrPut(key) { ParsingState() }
         val requestInfo = pendingRequests[key] ?: return false
@@ -236,7 +293,10 @@ object RequestHook {
                 totalResponseSize = bodyStartIndex + state.contentLength
                 if (buffer.size >= totalResponseSize) {
                     bodyBytes = if (HookPrefs.getBoolean(HookPrefs.KEY_COLLECT_RESPONSE_BODY, false) && state.contentLength > 0) {
-                        buffer.copyOfRange(bodyStartIndex, totalResponseSize)
+                        buffer.copyOfRange(
+                            bodyStartIndex,
+                            minOf(totalResponseSize, bodyStartIndex + MAX_CAPTURED_BODY_BYTES)
+                        )
                     } else null
                     true
                 } else false
@@ -259,7 +319,7 @@ object RequestHook {
         }
     }
 
-    private fun buildHttpRequest(key: Int, headers: String, body: ByteArray?, isHttps: Boolean) {
+    private fun buildHttpRequest(key: Long, headers: String, body: ByteArray?, isHttps: Boolean) {
         val lines = headers.lines()
         val requestLine = lines.firstOrNull()?.split(" ") ?: return
         if (requestLine.size < 2) return
@@ -274,6 +334,7 @@ object RequestHook {
         val cleanedHeaders = if (firstNewline != -1) headers.substring(firstNewline + 2) else headers
 
         val info = BlockedRequest(
+            requestId = nextRequestId(if (isHttps) "https" else "http"),
             requestType = if (isHttps) " HTTPS" else " HTTP", 
             requestValue = formatUrlWithoutQuery(Uri.parse(url)),
             method = method,
@@ -289,14 +350,14 @@ object RequestHook {
             dnsHost = null,
             fullAddress = null
         )
-        pendingRequests[key] = info
+        pendingRequests.put(key, info)?.requestId?.let { announcedPendingRequestIds.remove(it) }
     }
 
     private fun completeAndDispatchRequest(
-        key: Int, 
-        requestInfo: BlockedRequest, 
-        headers: String, 
-        body: ByteArray?, 
+        key: Long,
+        requestInfo: BlockedRequest,
+        headers: String,
+        body: ByteArray?,
         param: XC_MethodHook.MethodHookParam?
     ): Boolean {
         val lines = headers.lines()
@@ -376,7 +437,10 @@ object RequestHook {
                 val chunkDataEnd = chunkDataStart + chunkSize
                 if (buffer.size < chunkDataEnd + 2) return null
 
-                bodyStream.write(buffer, chunkDataStart, chunkSize)
+                val remainingCapture = MAX_CAPTURED_BODY_BYTES - bodyStream.size()
+                if (remainingCapture > 0) {
+                    bodyStream.write(buffer, chunkDataStart, minOf(chunkSize, remainingCapture))
+                }
                 currentIndex = chunkDataEnd + 2
             }
         } catch (e: Exception) {
@@ -385,29 +449,10 @@ object RequestHook {
     }
 
     private fun sendBroadcast(info: BlockedRequest, shouldBlock: Boolean, blockRuleType: String?, ruleUrl: String?) {
-        sendBlockedRequestBroadcast("all", info, shouldBlock, ruleUrl, blockRuleType)
-        sendBlockedRequestBroadcast(if (shouldBlock) "block" else "pass", info, shouldBlock, ruleUrl, blockRuleType)
+        sendBlockedRequestBroadcast(info, shouldBlock, ruleUrl, blockRuleType)
     }
 
-    private fun sendBlockedRequestBroadcast(type: String, info: BlockedRequest, isBlocked: Boolean, ruleUrl: String?, blockRuleType: String?) {
-        val key = info.dnsHost ?: info.urlString
-        if (key.isNullOrEmpty()) return
-
-        val hasResponse = info.responseCode != -1
-        val alreadySentComplete = sentRequestsCache[key] == true
-
-        if (alreadySentComplete) return
-
-        if (hasResponse) {
-            sentRequestsCache[key] = true
-        } 
-        else {
-            if (sentRequestsCache.containsKey(key)) {
-                return
-            }
-            sentRequestsCache[key] = false
-        }
-
+    private fun sendBlockedRequestBroadcast(info: BlockedRequest, isBlocked: Boolean, ruleUrl: String?, blockRuleType: String?) {
         try {
             var requestBodyUriString: String? = null
             var responseBodyUriString: String? = null
@@ -427,11 +472,12 @@ object RequestHook {
             responseBodyUriString = storeBody(info.responseBody, info.responseBodyContentType)
 
             val requestInfoForBroadcast = RequestInfo(
+                requestId = info.requestId,
                 appName = "${applicationContext.applicationInfo.loadLabel(applicationContext.packageManager)}${info.requestType}",
                 packageName = applicationContext.packageName,
                 request = info.requestValue,
                 timestamp = System.currentTimeMillis(),
-                requestType = type,
+                requestType = if (isBlocked) "block" else "pass",
                 isBlocked = isBlocked,
                 url = ruleUrl,
                 blockType = blockRuleType,

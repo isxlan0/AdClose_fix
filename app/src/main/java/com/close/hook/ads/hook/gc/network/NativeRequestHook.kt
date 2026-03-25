@@ -1,10 +1,7 @@
 package com.close.hook.ads.hook.gc.network
 
-import com.close.hook.ads.data.model.BlockedRequest
 import com.close.hook.ads.hook.util.HookUtil
 import de.robv.android.xposed.XposedBridge
-import java.io.ByteArrayOutputStream
-import java.nio.charset.Charset
 
 object NativeRequestHook {
 
@@ -35,7 +32,7 @@ object NativeRequestHook {
 
     @JvmStatic
     fun onNativeData(
-        id: Int,
+        id: Long,
         isWrite: Boolean,
         data: ByteArray?,
         address: String?,
@@ -44,14 +41,20 @@ object NativeRequestHook {
     ): Boolean {
         if (data == null || data.isEmpty()) return false
 
-        val key = if (isSSL) id else -id
+        val key = RequestHook.nativeKey(id, isSSL)
         
         var shouldBlock = false
 
         if (isWrite) {
-            val buffer = RequestHook.requestBuffers.getOrPut(key) { ByteArrayOutputStream() }
             try {
-                buffer.write(data)
+                RequestHook.appendToBuffer(
+                    key = key,
+                    buffers = RequestHook.requestBuffers,
+                    bytes = data,
+                    offset = 0,
+                    len = data.size,
+                    bufferLabel = "native request"
+                ) ?: return false
                 RequestHook.processRequestBuffer(key, isSSL)
                 
                 val requestInfo = RequestHook.pendingRequests[key]
@@ -76,19 +79,28 @@ object NativeRequestHook {
                     )
                     
                     RequestHook.pendingRequests[key] = enrichedInfo
+                    if (!RequestHook.markPendingRequestAnnounced(enrichedInfo.requestId)) {
+                        return shouldBlock
+                    }
 
                     shouldBlock = RequestHook.checkShouldBlockRequest(enrichedInfo)
                     if (shouldBlock) {
-                        RequestHook.pendingRequests.remove(key)
+                        RequestHook.releaseConnection(key)
                     }
                 }
             } catch (e: Exception) {
                 XposedBridge.log("$LOG_PREFIX Error processing request buffer: ${e.message}")
             }
         } else {
-            val buffer = RequestHook.responseBuffers.getOrPut(key) { ByteArrayOutputStream() }
             try {
-                buffer.write(data)
+                RequestHook.appendToBuffer(
+                    key = key,
+                    buffers = RequestHook.responseBuffers,
+                    bytes = data,
+                    offset = 0,
+                    len = data.size,
+                    bufferLabel = "native response"
+                ) ?: return false
                 if (RequestHook.processResponseBuffer(key, null)) {
                     shouldBlock = true
                 }
