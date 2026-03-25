@@ -63,11 +63,33 @@ jobs:
           KEY_ALIAS: ${{ secrets.SIGN_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.SIGN_KEY_PASSWORD }}
 
+      - name: Prepare APK Artifact
+        id: prepare_apk
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version_name="$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -n1)"
+          lsp_api_version="$(grep -oP '^targetApiVersion=\K\d+' app/src/main/resources/META-INF/xposed/module.prop | head -n1)"
+          apk_path="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+
+          if [ -z "$version_name" ] || [ -z "$lsp_api_version" ] || [ -z "$apk_path" ]; then
+            echo "Failed to resolve release APK metadata."
+            exit 1
+          fi
+
+          artifact_dir="dist"
+          artifact_name="AdClose-${version_name}-Api-${lsp_api_version}.apk"
+          mkdir -p "$artifact_dir"
+          cp "$apk_path" "$artifact_dir/$artifact_name"
+
+          echo "artifact_name=${artifact_name}" >> "$GITHUB_OUTPUT"
+          echo "artifact_path=${artifact_dir}/${artifact_name}" >> "$GITHUB_OUTPUT"
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         if: ${{ github.event_name != 'pull_request' }}
         with:
-          name: build_output_${{ github.sha }}
-          path: |
-            app/build/outputs/**
-          compression-level: 9
+          name: ${{ steps.prepare_apk.outputs.artifact_name }}
+          path: ${{ steps.prepare_apk.outputs.artifact_path }}
+          compression-level: 0
