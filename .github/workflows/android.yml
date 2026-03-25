@@ -11,6 +11,9 @@ on:
       - '.idea/**'
       - '!.github/workflows/**'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -102,6 +105,12 @@ jobs:
           cp "$apk_100_path" "$artifact_dir/$artifact_100_name"
           cp "$apk_101_path" "$artifact_dir/$artifact_101_name"
 
+          tag_name="v${version_name}"
+          release_name="AdClose ${version_name}"
+
+          echo "version_name=${version_name}" >> "$GITHUB_OUTPUT"
+          echo "tag_name=${tag_name}" >> "$GITHUB_OUTPUT"
+          echo "release_name=${release_name}" >> "$GITHUB_OUTPUT"
           echo "artifact_100_name=${artifact_100_name}" >> "$GITHUB_OUTPUT"
           echo "artifact_100_path=${artifact_dir}/${artifact_100_name}" >> "$GITHUB_OUTPUT"
           echo "artifact_101_name=${artifact_101_name}" >> "$GITHUB_OUTPUT"
@@ -122,3 +131,15 @@ jobs:
           name: ${{ steps.prepare_apks.outputs.artifact_101_name }}
           path: ${{ steps.prepare_apks.outputs.artifact_101_path }}
           compression-level: 0
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: ${{ github.event_name != 'pull_request' }}
+        with:
+          tag_name: ${{ steps.prepare_apks.outputs.tag_name }}
+          name: ${{ steps.prepare_apks.outputs.release_name }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: |
+            ${{ steps.prepare_apks.outputs.artifact_100_path }}
+            ${{ steps.prepare_apks.outputs.artifact_101_path }}
