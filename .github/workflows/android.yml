@@ -56,40 +56,54 @@ jobs:
       - name: Build with Gradle
         run: |
           echo ${{ secrets.SIGN_KEYSTORE_BASE64 }} | base64 -d > keystore.jks
-          ./gradlew :app:assembleRelease
+          ./gradlew :app:assembleLsp100Release :app:assembleLsp101Release
         env:
           KEYSTORE_PATH: "../keystore.jks"
           KEYSTORE_PASSWORD: ${{ secrets.SIGN_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.SIGN_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.SIGN_KEY_PASSWORD }}
 
-      - name: Prepare APK Artifact
-        id: prepare_apk
+      - name: Prepare APK Artifacts
+        id: prepare_apks
         shell: bash
         run: |
           set -euo pipefail
 
           version_name="$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -n1)"
-          lsp_api_version="$(grep -oP '^targetApiVersion=\K\d+' app/src/main/resources/META-INF/xposed/module.prop | head -n1)"
-          apk_path="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          apk_100_path="$(find app/build/outputs/apk/lsp100/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          apk_101_path="$(find app/build/outputs/apk/lsp101/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
 
-          if [ -z "$version_name" ] || [ -z "$lsp_api_version" ] || [ -z "$apk_path" ]; then
-            echo "Failed to resolve release APK metadata."
+          if [ -z "$version_name" ] || [ -z "$apk_100_path" ] || [ -z "$apk_101_path" ]; then
+            echo "Failed to resolve release APK artifacts."
             exit 1
           fi
 
           artifact_dir="dist"
-          artifact_name="AdClose-${version_name}-Api-${lsp_api_version}.apk"
           mkdir -p "$artifact_dir"
-          cp "$apk_path" "$artifact_dir/$artifact_name"
 
-          echo "artifact_name=${artifact_name}" >> "$GITHUB_OUTPUT"
-          echo "artifact_path=${artifact_dir}/${artifact_name}" >> "$GITHUB_OUTPUT"
+          artifact_100_name="AdClose-${version_name}-Api-100.apk"
+          artifact_101_name="AdClose-${version_name}-Api-101.apk"
 
-      - name: Upload Artifacts
+          cp "$apk_100_path" "$artifact_dir/$artifact_100_name"
+          cp "$apk_101_path" "$artifact_dir/$artifact_101_name"
+
+          echo "artifact_100_name=${artifact_100_name}" >> "$GITHUB_OUTPUT"
+          echo "artifact_100_path=${artifact_dir}/${artifact_100_name}" >> "$GITHUB_OUTPUT"
+          echo "artifact_101_name=${artifact_101_name}" >> "$GITHUB_OUTPUT"
+          echo "artifact_101_path=${artifact_dir}/${artifact_101_name}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload API 100 Artifact
         uses: actions/upload-artifact@v4
         if: ${{ github.event_name != 'pull_request' }}
         with:
-          name: ${{ steps.prepare_apk.outputs.artifact_name }}
-          path: ${{ steps.prepare_apk.outputs.artifact_path }}
+          name: ${{ steps.prepare_apks.outputs.artifact_100_name }}
+          path: ${{ steps.prepare_apks.outputs.artifact_100_path }}
+          compression-level: 0
+
+      - name: Upload API 101 Artifact
+        uses: actions/upload-artifact@v4
+        if: ${{ github.event_name != 'pull_request' }}
+        with:
+          name: ${{ steps.prepare_apks.outputs.artifact_101_name }}
+          path: ${{ steps.prepare_apks.outputs.artifact_101_path }}
           compression-level: 0

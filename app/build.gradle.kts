@@ -1,12 +1,5 @@
 import java.util.Calendar
-import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
-val xposedModuleProperties = Properties().apply {
-    file("src/main/resources/META-INF/xposed/module.prop").inputStream().use(::load)
-}
-val lspApiVersion = xposedModuleProperties.getProperty("targetApiVersion")?.toIntOrNull()
-    ?: error("targetApiVersion is missing or invalid in src/main/resources/META-INF/xposed/module.prop")
 
 plugins {
     id("com.android.application")
@@ -17,6 +10,28 @@ plugins {
     id("kotlin-parcelize")
     id("org.jetbrains.kotlin.plugin.serialization")
 }
+
+data class LspApiConfig(
+    val apiVersion: Int,
+    val apiDependency: Any,
+    val serviceDependency: Any,
+    val interfaceDependency: Any
+)
+
+val lspApiConfigs = mapOf(
+    "lsp100" to LspApiConfig(
+        apiVersion = 100,
+        apiDependency = files("libs/api-100.aar"),
+        serviceDependency = files("libs/service-100.aar"),
+        interfaceDependency = files("libs/interface-100.aar")
+    ),
+    "lsp101" to LspApiConfig(
+        apiVersion = 101,
+        apiDependency = "io.github.libxposed:api:101.0.0",
+        serviceDependency = "io.github.libxposed:service:101.0.0",
+        interfaceDependency = "io.github.libxposed:interface:101.0.0"
+    )
+)
 
 autoResConfig {
     generateClass.set(true)
@@ -63,6 +78,7 @@ android {
     namespace = "com.close.hook.ads"
     compileSdk = 35
     ndkVersion = "28.2.13676358"
+    flavorDimensions += "lspApi"
 
     signingConfigs {
         create("keyStore") {
@@ -81,7 +97,6 @@ android {
         targetSdk = 35
         versionCode = calculateVersionCode()
         versionName = "4.2.3"
-        buildConfigField("int", "LSP_API_VERSION", lspApiVersion.toString())
 
         vectorDrawables {
             useSupportLibrary = true
@@ -145,6 +160,15 @@ android {
         prefab = false
     }
 
+    productFlavors {
+        lspApiConfigs.forEach { (flavorName, config) ->
+            create(flavorName) {
+                dimension = "lspApi"
+                buildConfigField("int", "LSP_API_VERSION", config.apiVersion.toString())
+            }
+        }
+    }
+
     sourceSets {
         getByName("main") {
             jniLibs.srcDirs("src/main/cpp/libs")
@@ -167,9 +191,11 @@ configurations.configureEach {
 dependencies {
     compileOnly(libs.xposedApi)
     implementation(libs.dexkit)
-    compileOnly(files("libs/api-$lspApiVersion.aar"))
-    implementation(files("libs/service-$lspApiVersion.aar"))
-    implementation(files("libs/interface-$lspApiVersion.aar"))
+    lspApiConfigs.forEach { (flavorName, config) ->
+        add("${flavorName}CompileOnly", config.apiDependency)
+        add("${flavorName}Implementation", config.serviceDependency)
+        add("${flavorName}Implementation", config.interfaceDependency)
+    }
 
     implementation("com.bytedance.android:shadowhook:2.0.0")
 

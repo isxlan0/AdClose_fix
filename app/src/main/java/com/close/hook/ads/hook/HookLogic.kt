@@ -22,7 +22,6 @@ import com.close.hook.ads.preference.HookPrefs
 import com.close.hook.ads.util.AppUtils
 import de.robv.android.xposed.XposedBridge
 import io.github.libxposed.api.XposedInterface
-import io.github.libxposed.api.XposedModuleInterface
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -35,21 +34,27 @@ object HookLogic {
 
     private val hookScope = CoroutineScope(Dispatchers.IO)
 
-    fun loadPackage(param: XposedModuleInterface.PackageLoadedParam) {
-        if (!param.isFirstPackage || param.packageName == TAG) {
+    fun initializeModule(xposedInterface: XposedInterface, processName: String) {
+        this.xposedInterface = xposedInterface
+        ContextUtil.setupContextHooks()
+        XposedBridge.log("LibXposedEntry: Initialized for process $processName")
+    }
+
+    fun loadPackage(packageName: String, isFirstPackage: Boolean) {
+        if (!isFirstPackage || packageName == TAG) {
             return
         }
 
         ContextUtil.addOnApplicationContextInitializedCallback {
             ContextUtil.applicationContext?.let { context ->
                 try {
-                    val manager = SettingsManager(param.packageName, HookPrefs)
+                    val manager = SettingsManager(packageName, HookPrefs)
                     setupAppHooks(context, manager)
                     applySettings(context, manager)
                 } catch (e: Throwable) {
-                    XposedBridge.log("$TAG | Error in package ${param.packageName}: ${Log.getStackTraceString(e)}")
+                    XposedBridge.log("$TAG | Error in package $packageName: ${Log.getStackTraceString(e)}")
                 }
-            } ?: XposedBridge.log("$TAG | FATAL: Context was null inside callback for ${param.packageName}. Hooks skipped.")
+            } ?: XposedBridge.log("$TAG | FATAL: Context was null inside callback for $packageName. Hooks skipped.")
         }
     }
 

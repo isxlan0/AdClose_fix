@@ -1,13 +1,14 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-`app/` is the only Android module. Kotlin and Java sources live in `app/src/main/java/com/close/hook/ads`, split by responsibility: `ui/` for screens and adapters, `hook/` for Xposed and request interception logic, `data/` for Room models and repositories, and `manager/`, `preference/`, and `util/` for shared services. Native interception code is in `app/src/main/cpp`, AIDL contracts in `app/src/main/aidl`, and Xposed metadata in `app/src/main/resources/META-INF/xposed`. Android resources and translations live under `app/src/main/res`, bundled AARs under `app/libs`, and CI config under `.github/workflows/android.yml`.
+`app/` is the only Android module. Kotlin and Java sources live in `app/src/main/java/com/close/hook/ads`, split by responsibility: `ui/` for screens and adapters, `hook/` for Xposed and request interception logic, `data/` for Room models and repositories, and `manager/`, `preference/`, and `util/` for shared services. API-specific compatibility code and Xposed metadata live in flavor folders such as `app/src/lsp100` and `app/src/lsp101`. Native interception code is in `app/src/main/cpp`, AIDL contracts in `app/src/main/aidl`, Android resources and translations live under `app/src/main/res`, bundled AARs under `app/libs`, and CI config under `.github/workflows/android.yml`.
 
 ## Build, Test, and Development Commands
 Use the Gradle wrapper from the repository root.
 
-- `.\gradlew.bat :app:assembleDebug` builds a local debug APK.
-- `.\gradlew.bat :app:assembleRelease` builds the release APK; this matches CI.
+- `.\gradlew.bat :app:assembleLsp100Debug` builds the API 100 debug APK.
+- `.\gradlew.bat :app:assembleLsp101Debug` builds the API 101 debug APK.
+- `.\gradlew.bat :app:assembleLsp100Release :app:assembleLsp101Release` builds both release APKs; this matches CI.
 - `.\gradlew.bat lint` runs Android lint checks.
 - `.\gradlew.bat testDebugUnitTest` runs JVM unit tests when present.
 - `.\gradlew.bat clean` clears Gradle build outputs.
