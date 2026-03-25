@@ -53,6 +53,16 @@ jobs:
       - name: Grant execute permission for Gradle wrapper
         run: chmod +x gradlew
 
+      - name: Install Android 36 SDK
+        run: |
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME}}"
+          sdkmanager_path="${sdk_root}/cmdline-tools/latest/bin/sdkmanager"
+
+          yes | "${sdkmanager_path}" --licenses > /dev/null
+          "${sdkmanager_path}" --install \
+            "platforms;android-36" \
+            "build-tools;36.0.0"
+
       - name: Build with Gradle
         run: |
           echo ${{ secrets.SIGN_KEYSTORE_BASE64 }} | base64 -d > keystore.jks

@@ -76,7 +76,7 @@ materialThemeBuilder {
 
 android {
     namespace = "com.close.hook.ads"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = "28.2.13676358"
     flavorDimensions += "lspApi"
 
