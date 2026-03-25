@@ -25,6 +25,7 @@ import io.github.libxposed.api.XposedInterface
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 object HookLogic {
 
@@ -33,6 +34,7 @@ object HookLogic {
     private const val TAG = "com.close.hook.ads"
 
     private val hookScope = CoroutineScope(Dispatchers.IO)
+    private val initializedPackages = ConcurrentHashMap.newKeySet<String>()
 
     fun initializeModule(xposedInterface: XposedInterface, processName: String) {
         this.xposedInterface = xposedInterface
@@ -42,6 +44,11 @@ object HookLogic {
 
     fun loadPackage(packageName: String, isFirstPackage: Boolean) {
         if (!isFirstPackage || packageName == TAG) {
+            return
+        }
+
+        if (!initializedPackages.add(packageName)) {
+            XposedBridge.log("$TAG | Skip duplicate package callback for $packageName")
             return
         }
 

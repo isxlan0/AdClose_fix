@@ -69,8 +69,8 @@ class SettingsFragment : BaseFragment<FragmentSettingBinding>() {
             )
             binding.designAboutInfo.text = HtmlCompat.fromHtml(
                 getString(
-                    R.string.about_view_source_code,
-                    "<b><a href=\"https://github.com/zjyzip/AdClose\">GitHub</a></b>",
+                    R.string.about_source_based_on,
+                    "<b><a href=\"https://github.com/isxlan0/AdClose_fix\">Github</a></b>",
                 ), HtmlCompat.FROM_HTML_MODE_LEGACY
             )
             binding.designAboutVersion.text = java.lang.String.format(

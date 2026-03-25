@@ -22,7 +22,6 @@ import com.close.hook.ads.ui.viewmodel.AppsViewModel
 import com.close.hook.ads.util.IOnFabClickContainer
 import com.close.hook.ads.util.IOnFabClickListener
 import com.close.hook.ads.preference.PrefManager
-import com.close.hook.ads.manager.ServiceManager
 import com.close.hook.ads.util.dp
 import com.google.android.material.behavior.HideBottomViewOnScrollBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -236,11 +235,6 @@ class AppsPagerFragment : BasePagerFragment(), IOnFabClickContainer {
         if (isSortBy) {
             handleSortByChipClick(titleResId, index)
         } else {
-            if (titleResId == R.string.filter_configured && !ServiceManager.isModuleActivated) {
-                showSnackbar(getString(R.string.module_not_activated))
-                chip.isChecked = false
-                return
-            }
             when (titleResId) {
                 R.string.filter_configured -> PrefManager.configured = chip.isChecked
                 R.string.filter_recent_update -> PrefManager.updated = chip.isChecked

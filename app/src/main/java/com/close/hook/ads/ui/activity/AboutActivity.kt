@@ -49,7 +49,7 @@ class AboutActivity : AbsAboutActivity() {
         items.add(Card("fmz200(wool_scripts)\nhttps://github.com/fmz200/wool_scripts"))
 
         items.add(Category("FeedBack"))
-        items.add(Card("Telegram\nhttps://t.me/AdClose"))
+        items.add(Card("Telegram\nhttps://t.me/AdClosefix"))
         items.add(Card("Telegram Group\nhttps://t.me/AdClose_Chat"))
 
         items.add(Category("Open Source"))

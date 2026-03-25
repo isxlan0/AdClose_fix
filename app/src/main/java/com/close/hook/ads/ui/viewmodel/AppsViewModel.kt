@@ -6,13 +6,17 @@ import androidx.lifecycle.viewModelScope
 import com.close.hook.ads.data.model.AppFilterState
 import com.close.hook.ads.data.model.AppInfo
 import com.close.hook.ads.data.repository.AppRepository
+import com.close.hook.ads.manager.ServiceManager
 import com.close.hook.ads.preference.PrefManager
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -27,11 +31,20 @@ class AppsViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = AppRepository(application.packageManager)
     private val _filterState = MutableStateFlow(createDefaultFilterState())
     private val _uiState = MutableStateFlow(UiState())
+    private var appsRefreshJob: Job? = null
 
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     init {
         refreshApps()
+        viewModelScope.launch {
+            ServiceManager.connectionState
+                .map { ServiceManager.isModuleActivated }
+                .distinctUntilChanged()
+                .collectLatest {
+                    refreshApps()
+                }
+        }
     }
 
     private fun createDefaultFilterState() = AppFilterState(
@@ -56,7 +69,8 @@ class AppsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun refreshApps() {
-        viewModelScope.launch {
+        appsRefreshJob?.cancel()
+        appsRefreshJob = viewModelScope.launch {
             combineFlows()
                 .collectLatest { _uiState.value = it }
         }

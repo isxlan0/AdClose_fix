@@ -6,7 +6,6 @@ import android.os.Build
 import com.close.hook.ads.R
 import com.close.hook.ads.data.model.AppFilterState
 import com.close.hook.ads.data.model.AppInfo
-import com.close.hook.ads.manager.ServiceManager
 import com.close.hook.ads.preference.HookPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -40,7 +39,6 @@ class AppRepository(private val packageManager: PackageManager) {
             packageManager.getInstalledPackages(0)
         }.getOrElse { emptyList() }
 
-        val modActive = ServiceManager.isModuleActivated
         val allPrefs = HookPrefs.getAll()
 
         val appList = coroutineScope {
@@ -64,16 +62,13 @@ class AppRepository(private val packageManager: PackageManager) {
                         false
                     }
 
-                    val enabled = if (modActive) {
-                        var isHooked = 0
-                        for (key in enableKeys) {
-                            if (allPrefs["$key${pkg.packageName}"] == true) {
-                                isHooked = 1
-                                break
-                            }
+                    var isHooked = 0
+                    for (key in enableKeys) {
+                        if (allPrefs["$key${pkg.packageName}"] == true) {
+                            isHooked = 1
+                            break
                         }
-                        isHooked
-                    } else 0
+                    }
 
                     AppInfo(
                         appName = app.loadLabel(packageManager).toString(),
@@ -86,7 +81,7 @@ class AppRepository(private val packageManager: PackageManager) {
                         targetSdk = app.targetSdkVersion,
                         minSdk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) app.minSdkVersion else 0,
                         isAppEnable = if (isEn) 1 else 0,
-                        isEnable = enabled,
+                        isEnable = isHooked,
                         isSystem = isSys
                     )
                 }

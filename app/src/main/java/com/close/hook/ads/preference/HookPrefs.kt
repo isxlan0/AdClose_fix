@@ -2,6 +2,7 @@ package com.close.hook.ads.preference
 
 import android.os.ParcelFileDescriptor
 import android.util.Log
+import com.close.hook.ads.closeApp
 import com.close.hook.ads.data.model.CustomHookInfo
 import com.close.hook.ads.hook.HookLogic
 import com.close.hook.ads.manager.ServiceManager
@@ -32,6 +33,7 @@ object HookPrefs {
 
     private const val TAG = "HookPrefs"
     private const val GLOBAL_KEY = "global"
+    private const val LOCAL_CACHE_DIR = "hook_prefs_cache"
 
     private const val FILE_GENERAL_SETTINGS = "com.close.hook.ads_preferences.json"
     private const val FILE_PREFIX_CUSTOM_HOOK = "custom_hooks_"
@@ -81,6 +83,40 @@ object HookPrefs {
     val generalSettingsFlow = generalSettingsCache.asStateFlow()
     
     private val cacheLock = Any()
+
+    private fun getLocalCacheDir() = try {
+        closeApp.filesDir.resolve(LOCAL_CACHE_DIR).apply { mkdirs() }
+    } catch (_: UninitializedPropertyAccessException) {
+        null
+    }
+
+    private fun getLocalCacheFile(fileName: String) = getLocalCacheDir()?.resolve(fileName)
+
+    private fun readLocalCache(fileName: String): String {
+        val file = getLocalCacheFile(fileName) ?: return ""
+        return try {
+            if (file.exists()) file.readText(StandardCharsets.UTF_8) else ""
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to read local cache: $fileName", e)
+            ""
+        }
+    }
+
+    private fun writeLocalCache(fileName: String, content: String): Boolean {
+        val file = getLocalCacheFile(fileName) ?: return false
+        return try {
+            file.writeText(content, StandardCharsets.UTF_8)
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to write local cache: $fileName", e)
+            false
+        }
+    }
+
+    private fun deleteLocalCache(fileName: String): Boolean {
+        val file = getLocalCacheFile(fileName) ?: return false
+        return !file.exists() || file.delete()
+    }
 
     private fun getSettingsJson(): JsonObject {
         val cached = generalSettingsCache.value
@@ -271,20 +307,28 @@ object HookPrefs {
     }
 
     private fun readAllTextFromFile(fileName: String): String {
-        val accessor = fileAccessor ?: return ""
-        
+        val accessor = fileAccessor
+        if (accessor == null) {
+            return readLocalCache(fileName)
+        }
+
         if (!remoteFileExists(fileName, accessor)) {
-            return ""
+            return readLocalCache(fileName)
         }
 
         return try {
             accessor.openRemoteFile(fileName, "r")?.use { pfd ->
                 InputStreamReader(ParcelFileDescriptor.AutoCloseInputStream(pfd), StandardCharsets.UTF_8).use {
-                    it.readText()
+                    it.readText().also { content ->
+                        if (content.isNotEmpty()) {
+                            writeLocalCache(fileName, content)
+                        }
+                    }
                 }
-            } ?: ""
+            } ?: readLocalCache(fileName)
         } catch (e: Exception) {
-            ""
+            Log.w(TAG, "Failed to read remote file: $fileName", e)
+            readLocalCache(fileName)
         }
     }
 
@@ -298,8 +342,9 @@ object HookPrefs {
     }
 
     private fun writeTextToFile(fileName: String, content: String): Boolean {
-        val accessor = fileAccessor ?: return false
-        return try {
+        val localSuccess = writeLocalCache(fileName, content)
+        val accessor = fileAccessor ?: return localSuccess
+        val remoteSuccess = try {
             accessor.openRemoteFile(fileName, "rw")?.use { pfd ->
                 FileOutputStream(pfd.fileDescriptor).use { fos ->
                     fos.channel.truncate(0)
@@ -313,15 +358,18 @@ object HookPrefs {
             Log.e(TAG, "Failed to write text to file: $fileName", e)
             false
         }
+        return remoteSuccess || localSuccess
     }
 
     private fun deleteConfigFile(fileName: String): Boolean {
-        return try {
+        val localDeleted = deleteLocalCache(fileName)
+        val remoteDeleted = try {
             fileAccessor?.deleteRemoteFile(fileName) ?: false
         } catch (e: Exception) {
             Log.e(TAG, "Failed to delete config file: $fileName", e)
             false
         }
+        return localDeleted || remoteDeleted
     }
 
     internal fun buildKey(prefix: String, packageName: String?): String {
@@ -350,5 +398,37 @@ object HookPrefs {
 
     fun getRequestCacheExpiration(): Long {
         return getString(KEY_REQUEST_CACHE_EXPIRATION, "5")?.toLongOrNull() ?: 5L
+    }
+
+    fun syncLocalCacheToRemote() {
+        val accessor = fileAccessor ?: return
+        val cacheDir = getLocalCacheDir() ?: return
+        val localFiles = cacheDir.listFiles()?.filter { it.isFile } ?: return
+        val managedLocalNames = localFiles.map { it.name }.toSet()
+
+        localFiles.forEach { file ->
+            runCatching {
+                val content = file.readText(StandardCharsets.UTF_8)
+                accessor.openRemoteFile(file.name, "rw")?.use { pfd ->
+                    FileOutputStream(pfd.fileDescriptor).use { fos ->
+                        fos.channel.truncate(0)
+                        fos.writer(StandardCharsets.UTF_8).use { writer ->
+                            writer.write(content)
+                        }
+                    }
+                }
+            }.onFailure { error ->
+                Log.w(TAG, "Failed to sync local cache to remote: ${file.name}", error)
+            }
+        }
+
+        runCatching {
+            accessor.listRemoteFiles()
+                ?.filter { it == FILE_GENERAL_SETTINGS || it.startsWith(FILE_PREFIX_CUSTOM_HOOK) }
+                ?.filterNot { it in managedLocalNames }
+                ?.forEach { accessor.deleteRemoteFile(it) }
+        }.onFailure { error ->
+            Log.w(TAG, "Failed to prune remote cache files", error)
+        }
     }
 }

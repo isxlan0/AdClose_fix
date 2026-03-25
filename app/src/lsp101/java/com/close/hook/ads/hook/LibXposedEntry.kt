@@ -9,6 +9,10 @@ class LibXposedEntry : XposedModule() {
         HookLogic.initializeModule(this, param.processName)
     }
 
+    override fun onPackageLoaded(param: XposedModuleInterface.PackageLoadedParam) {
+        HookLogic.loadPackage(param.packageName, param.isFirstPackage)
+    }
+
     override fun onPackageReady(param: XposedModuleInterface.PackageReadyParam) {
         HookLogic.loadPackage(param.packageName, param.isFirstPackage)
     }

@@ -13,49 +13,76 @@ import android.view.MotionEvent
 import android.view.View
 import androidx.core.content.ContextCompat
 import androidx.core.text.HtmlCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.close.hook.ads.BuildConfig
 import com.close.hook.ads.R
 import com.close.hook.ads.databinding.FragmentHomeBinding
 import com.close.hook.ads.debug.PerformanceActivity
+import com.close.hook.ads.manager.ConnectionState
 import com.close.hook.ads.manager.ServiceManager
 import com.close.hook.ads.ui.activity.AboutActivity
 import com.close.hook.ads.ui.fragment.base.BaseFragment
 import com.close.hook.ads.util.resolveColorAttr
+import kotlinx.coroutines.launch
 
 class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         initToolBar()
-        initInfo()
+        initStaticInfo()
+        observeServiceState()
     }
 
     @SuppressLint("SetTextI1n", "HardwareIds")
-    private fun initInfo() {
+    private fun initStaticInfo() {
         val context = requireContext()
-        val isActivated = ServiceManager.isModuleActivated
-
-        val colorAttr = if (isActivated) {
-            android.R.attr.colorPrimary
-        } else {
-            android.R.attr.colorError
-        }
-        val primaryOrErrorColor = context.resolveColorAttr(colorAttr)
 
         binding.apply {
-            status.setCardBackgroundColor(primaryOrErrorColor)
-            statusIcon.setImageDrawable(
-                ContextCompat.getDrawable(
-                    context,
-                    if (isActivated) R.drawable.ic_round_check_circle_24 else R.drawable.ic_about
-                )
-            )
-            statusTitle.text = getString(if (isActivated) R.string.activated else R.string.not_activated)
             statusSummary.text = getString(R.string.version_format, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE)
 
             setSystemInfo(context)
             setHyperLinks()
         }
+    }
+
+    private fun observeServiceState() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                ServiceManager.connectionState.collect { state ->
+                    renderActivationState(state)
+                }
+            }
+        }
+    }
+
+    private fun renderActivationState(state: ConnectionState) {
+        val context = requireContext()
+        val (titleRes, colorAttr, iconRes) = when {
+            ServiceManager.isModuleActivated -> Triple(
+                R.string.activated,
+                android.R.attr.colorPrimary,
+                R.drawable.ic_round_check_circle_24
+            )
+
+            state is ConnectionState.Connecting -> Triple(
+                R.string.connecting_service,
+                android.R.attr.colorPrimary,
+                R.drawable.ic_about
+            )
+
+            else -> Triple(
+                R.string.not_activated,
+                android.R.attr.colorError,
+                R.drawable.ic_about
+            )
+        }
+
+        binding.status.setCardBackgroundColor(context.resolveColorAttr(colorAttr))
+        binding.statusIcon.setImageDrawable(ContextCompat.getDrawable(context, iconRes))
+        binding.statusTitle.text = getString(titleRes)
     }
 
     private fun setSystemInfo(context: Context) {
@@ -89,13 +116,13 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
         binding.apply {
             viewSource.movementMethod = linkMovementMethod
             viewSource.text = HtmlCompat.fromHtml(
-                getString(R.string.about_view_source_code, "<b><a href=\"https://github.com/zjyzip/AdClose\">GitHub</a></b>"),
+                getString(R.string.about_view_source_code, "<b><a href=\"https://github.com/isxlan0/AdClose_fix\">Github</a></b>"),
                 HtmlCompat.FROM_HTML_MODE_LEGACY
             )
 
             feedback.movementMethod = linkMovementMethod
             feedback.text = HtmlCompat.fromHtml(
-                getString(R.string.join_telegram_channel, "<b><a href=\"https://t.me/AdClose\">Telegram</a></b>"),
+                getString(R.string.join_telegram_channel, "<b><a href=\"https://t.me/AdClosefix\">TG</a></b>"),
                 HtmlCompat.FROM_HTML_MODE_LEGACY
             )
         }

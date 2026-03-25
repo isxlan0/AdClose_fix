@@ -195,6 +195,7 @@
     <string name="filter_disabled">已禁用</string>
     <string name="sort_by_default">默认排序方式已切换为</string>
     <string name="about_view_source_code"><![CDATA[在 %1$s 查看源码]]></string>
+    <string name="about_source_based_on"><![CDATA[当前源码基于 %1$s 仓库二次修改]]></string>
     <string name="block">加入黑名单</string>
     <string name="copy">复制到剪贴板</string>
     <string name="clearAll">全部清除</string>
@@ -216,6 +217,7 @@
     <string name="join_telegram_channel"><![CDATA[加入我们的 %1$s 频道]]></string>
     <string name="default_page">默认打开页面</string>
     <string name="activated">已激活</string>
+    <string name="connecting_service">正在连接框架</string>
     <string name="not_activated">未激活</string>
     <string name="version_format">版本: %1$s(%2$d)</string>
     <string name="export_empty_request_list">请求列表为空，无法导出</string>
