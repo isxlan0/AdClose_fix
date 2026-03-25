@@ -39,7 +39,7 @@ class SettingsFragment : BaseFragment<FragmentSettingBinding>() {
                         startActivity(
                             Intent(
                                 Intent.ACTION_VIEW,
-                                Uri.parse("https://t.me/AdClose_Chat")
+                                Uri.parse("https://t.me/AdClosefix_Chat")
                             )
                         )
                     } catch (e: ActivityNotFoundException) {
@@ -69,8 +69,8 @@ class SettingsFragment : BaseFragment<FragmentSettingBinding>() {
             )
             binding.designAboutInfo.text = HtmlCompat.fromHtml(
                 getString(
-                    R.string.about_source_based_on,
-                    "<b><a href=\"https://github.com/isxlan0/AdClose_fix\">Github</a></b>",
+                    R.string.about_original_repo_notice,
+                    "<b><a href=\"https://github.com/zjyzip/AdClose\">Github</a></b>",
                 ), HtmlCompat.FROM_HTML_MODE_LEGACY
             )
             binding.designAboutVersion.text = java.lang.String.format(

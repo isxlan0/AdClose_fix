@@ -24,6 +24,10 @@ class AboutActivity : AbsAboutActivity() {
     override fun onItemsCreated(items: MutableList<Any>) {
         items.add(Category("About"))
         items.add(Card("""
+    |本模块基于原仓库修改：
+    |https://github.com/zjyzip/AdClose
+    |不保证完全可用。
+    |
     |这是一个Xposed模块，请在LSPosed框架环境中使用。
     |
     |此模块旨在优化用户体验，减少不必要的广告干扰和提高应用效率。
@@ -37,6 +41,8 @@ class AboutActivity : AbsAboutActivity() {
     """.trimMargin()))
 
         items.add(Category("Developer"))
+        items.add(Contributor(R.drawable.cont_author, "isxlan0", "二次修改开发者", "https://github.com/isxlan0/"))
+        items.add(Line())
         items.add(Contributor(R.drawable.cont_author, "zjyzip", "Developer & Designer", "https://github.com/zjyzip"))
         items.add(Line())
         items.add(Contributor(R.drawable.cont_bggrgjqaubcoe, "bggRGjQaUbCoE", "Developer & Collaborator", "https://github.com/bggRGjQaUbCoE"))
@@ -50,7 +56,7 @@ class AboutActivity : AbsAboutActivity() {
 
         items.add(Category("FeedBack"))
         items.add(Card("Telegram\nhttps://t.me/AdClosefix"))
-        items.add(Card("Telegram Group\nhttps://t.me/AdClose_Chat"))
+        items.add(Card("Telegram Group\nhttps://t.me/AdClosefix_Chat"))
 
         items.add(Category("Open Source"))
         items.add(License("XposedBridge", "rovo89", License.APACHE_2, "https://github.com/rovo89/XposedBridge"))

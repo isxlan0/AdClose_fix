@@ -63,6 +63,9 @@ jobs:
             "platforms;android-36" \
             "build-tools;36.0.0"
 
+      - name: Resolve Build Timestamp
+        run: echo "BUILD_TIMESTAMP=$(TZ=Asia/Hong_Kong date +%Y%m%d%H%M)" >> "$GITHUB_ENV"
+
       - name: Build with Gradle
         run: |
           echo ${{ secrets.SIGN_KEYSTORE_BASE64 }} | base64 -d > keystore.jks
@@ -72,6 +75,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.SIGN_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.SIGN_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.SIGN_KEY_PASSWORD }}
+          BUILD_TIMESTAMP: ${{ env.BUILD_TIMESTAMP }}
 
       - name: Prepare APK Artifacts
         id: prepare_apks
@@ -79,11 +83,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          version_name="$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -n1)"
+          base_version_name="$(grep -oP 'baseVersionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -n1)"
+          version_name="${base_version_name}.${BUILD_TIMESTAMP}"
           apk_100_path="$(find app/build/outputs/apk/lsp100/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
           apk_101_path="$(find app/build/outputs/apk/lsp101/release -maxdepth 1 -type f -name '*.apk' | head -n1)"
 
-          if [ -z "$version_name" ] || [ -z "$apk_100_path" ] || [ -z "$apk_101_path" ]; then
+          if [ -z "$base_version_name" ] || [ -z "$version_name" ] || [ -z "$apk_100_path" ] || [ -z "$apk_101_path" ]; then
             echo "Failed to resolve release APK artifacts."
             exit 1
           fi

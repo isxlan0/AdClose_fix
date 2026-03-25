@@ -201,6 +201,7 @@
     <string name="sort_by_default">The default sorting method has been switched to</string>
     <string name="about_view_source_code"><![CDATA[View source code at %1$s]]></string>
     <string name="about_source_based_on"><![CDATA[Current source is based on the %1$s repository with further modifications]]></string>
+    <string name="about_original_repo_notice"><![CDATA[This is an Xposed module.<br/><br/>It is based on the original repository %1$s and may not be fully usable.]]></string>
     <string name="block">block</string>
     <string name="copy">copy to clipboard</string>
     <string name="clearAll">clear all</string>

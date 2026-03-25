@@ -196,6 +196,7 @@
     <string name="sort_by_default">默认排序方式已切换为</string>
     <string name="about_view_source_code"><![CDATA[在 %1$s 查看源码]]></string>
     <string name="about_source_based_on"><![CDATA[当前源码基于 %1$s 仓库二次修改]]></string>
+    <string name="about_original_repo_notice"><![CDATA[這是一個 Xposed 模組。<br/><br/>本模組基於原倉庫 %1$s 修改，不保證完全可用。]]></string>
     <string name="block">加入黑名单</string>
     <string name="copy">复制到剪贴板</string>
     <string name="clearAll">全部清除</string>

@@ -1,4 +1,6 @@
-import java.util.Calendar
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -17,6 +19,19 @@ data class LspApiConfig(
     val serviceDependency: Any,
     val interfaceDependency: Any
 )
+
+val buildZoneId: ZoneId = ZoneId.of("Asia/Hong_Kong")
+val buildTimestampFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmm")
+val versionCodeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyDDDHHmm")
+val baseVersionName = "4.2.3"
+
+val buildTimestamp = System.getenv("BUILD_TIMESTAMP")
+    ?.trim()
+    ?.takeIf { it.isNotEmpty() }
+    ?.let { timestamp ->
+        runCatching { LocalDateTime.parse(timestamp, buildTimestampFormatter) }.getOrNull()
+    }
+    ?: LocalDateTime.now(buildZoneId)
 
 val lspApiConfigs = mapOf(
     "lsp100" to LspApiConfig(
@@ -95,8 +110,8 @@ android {
         applicationId = "com.close.hook.ads"
         minSdk = 26
         targetSdk = 35
-        versionCode = calculateVersionCode()
-        versionName = "4.2.3"
+        versionCode = calculateVersionCode(buildTimestamp)
+        versionName = calculateVersionName(baseVersionName, buildTimestamp)
 
         vectorDrawables {
             useSupportLibrary = true
@@ -176,12 +191,12 @@ android {
     }
 }
 
-fun calculateVersionCode(): Int {
-    val calendar = Calendar.getInstance()
-    val year = calendar.get(Calendar.YEAR)
-    val month = calendar.get(Calendar.MONTH) + 1
-    val day = calendar.get(Calendar.DAY_OF_MONTH)
-    return year * 10000 + month * 100 + day
+fun calculateVersionName(baseVersionName: String, buildTimestamp: LocalDateTime): String {
+    return "$baseVersionName.${buildTimestamp.format(buildTimestampFormatter)}"
+}
+
+fun calculateVersionCode(buildTimestamp: LocalDateTime): Int {
+    return buildTimestamp.format(versionCodeFormatter).toInt()
 }
 
 configurations.configureEach {
