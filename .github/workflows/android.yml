@@ -107,10 +107,16 @@ jobs:
 
           tag_name="v${version_name}"
           release_name="AdClose ${version_name}"
+          release_body="$(git log -1 --pretty=%s)"
 
           echo "version_name=${version_name}" >> "$GITHUB_OUTPUT"
           echo "tag_name=${tag_name}" >> "$GITHUB_OUTPUT"
           echo "release_name=${release_name}" >> "$GITHUB_OUTPUT"
+          {
+            echo "release_body<<EOF"
+            echo "${release_body}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
           echo "artifact_100_name=${artifact_100_name}" >> "$GITHUB_OUTPUT"
           echo "artifact_100_path=${artifact_dir}/${artifact_100_name}" >> "$GITHUB_OUTPUT"
           echo "artifact_101_name=${artifact_101_name}" >> "$GITHUB_OUTPUT"
@@ -139,7 +145,7 @@ jobs:
           tag_name: ${{ steps.prepare_apks.outputs.tag_name }}
           name: ${{ steps.prepare_apks.outputs.release_name }}
           target_commitish: ${{ github.sha }}
-          generate_release_notes: true
+          body: ${{ steps.prepare_apks.outputs.release_body }}
           files: |
             ${{ steps.prepare_apks.outputs.artifact_100_path }}
             ${{ steps.prepare_apks.outputs.artifact_101_path }}
