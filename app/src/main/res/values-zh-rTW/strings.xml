@@ -203,6 +203,7 @@
     <string name="delete">刪除</string>
     <string name="add">新增</string>
     <string name="info">基本資訊</string>
+    <string name="lsp_api_version">LSP API 版本</string>
     <string name="android_version">Android 版本</string>
     <string name="sdk_level">SDK 等級</string>
     <string name="android_id">Android ID</string>

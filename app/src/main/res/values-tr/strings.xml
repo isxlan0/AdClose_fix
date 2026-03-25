@@ -203,6 +203,7 @@
     <string name="delete">Sil</string>
     <string name="add">Ekle</string>
     <string name="info">Temel Bilgiler</string>
+    <string name="lsp_api_version">LSP API Sürümü</string>
     <string name="android_version">Android Sürümü</string>
     <string name="sdk_level">SDK Seviyesi</string>
     <string name="android_id">Android ID</string>

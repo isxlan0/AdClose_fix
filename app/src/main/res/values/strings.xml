@@ -209,6 +209,7 @@
     <string name="delete">Delete</string>
     <string name="add">add</string>
     <string name="info">Info</string>
+    <string name="lsp_api_version">LSP API Version</string>
     <string name="android_version">Android Version</string>
     <string name="sdk_level">SDK Level</string>
     <string name="android_id">Android ID</string>

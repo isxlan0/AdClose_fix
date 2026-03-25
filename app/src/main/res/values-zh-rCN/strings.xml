@@ -204,6 +204,7 @@
     <string name="delete">删除</string>
     <string name="add">添加</string>
     <string name="info">基本信息</string>
+    <string name="lsp_api_version">LSP API 版本</string>
     <string name="android_version">安卓版本</string>
     <string name="sdk_level">SDK等级</string>
     <string name="android_id">安卓ID</string>

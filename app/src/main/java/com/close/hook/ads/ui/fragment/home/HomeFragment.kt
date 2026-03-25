@@ -62,6 +62,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
         val contentResolver = context.contentResolver
 
         binding.apply {
+            lspApiVersionValue.text = BuildConfig.LSP_API_VERSION.toString()
             androidVersionValue.text = Build.VERSION.RELEASE
             sdkVersionValue.text = Build.VERSION.SDK_INT.toString()
 

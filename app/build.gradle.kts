@@ -1,5 +1,12 @@
 import java.util.Calendar
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+val xposedModuleProperties = Properties().apply {
+    file("src/main/resources/META-INF/xposed/module.prop").inputStream().use(::load)
+}
+val lspApiVersion = xposedModuleProperties.getProperty("targetApiVersion")?.toIntOrNull()
+    ?: error("targetApiVersion is missing or invalid in src/main/resources/META-INF/xposed/module.prop")
 
 plugins {
     id("com.android.application")
@@ -74,6 +81,7 @@ android {
         targetSdk = 35
         versionCode = calculateVersionCode()
         versionName = "4.2.3"
+        buildConfigField("int", "LSP_API_VERSION", lspApiVersion.toString())
 
         vectorDrawables {
             useSupportLibrary = true
@@ -159,9 +167,9 @@ configurations.configureEach {
 dependencies {
     compileOnly(libs.xposedApi)
     implementation(libs.dexkit)
-    compileOnly(files("libs/api-100.aar"))
-    implementation(files("libs/service-100.aar"))
-    implementation(files("libs/interface-100.aar"))
+    compileOnly(files("libs/api-$lspApiVersion.aar"))
+    implementation(files("libs/service-$lspApiVersion.aar"))
+    implementation(files("libs/interface-$lspApiVersion.aar"))
 
     implementation("com.bytedance.android:shadowhook:2.0.0")
 
