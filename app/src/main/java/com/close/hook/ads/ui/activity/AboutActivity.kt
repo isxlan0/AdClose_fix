@@ -41,7 +41,7 @@ class AboutActivity : AbsAboutActivity() {
     """.trimMargin()))
 
         items.add(Category("Developer"))
-        items.add(Contributor(R.drawable.cont_author, "isxlan0", "二次修改开发者", "https://github.com/isxlan0/"))
+        items.add(Contributor(R.drawable.cont_isxlan0, "isxlan0", "Secondary Developer", "https://github.com/isxlan0/"))
         items.add(Line())
         items.add(Contributor(R.drawable.cont_author, "zjyzip", "Developer & Designer", "https://github.com/zjyzip"))
         items.add(Line())

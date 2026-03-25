@@ -1,7 +1,8 @@
 # AdClose
 
 **AdClose** 是一个基于Xposed框架的Android广告屏蔽工具，致力于提供一个无广告的应用浏览体验，旨在优化用户体验并减少干扰。请在LSPosed框架环境中使用。
-本仓库基于原仓库修改https://github.com/zjyzip/AdClose
+
+本仓库代码均基于原仓库修改[zjyzip/AdClose](https://github.com/zjyzip/AdClose)
 不保证完全可用
 
 AdClose的核心功能是阻止应用内的广告SDK初始化加载，并拦截应用广告请求以屏蔽广告。
