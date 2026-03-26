@@ -32,28 +32,63 @@ interface UrlDao {
     @Query("SELECT * FROM url_info WHERE url LIKE '%' || :searchText || '%' OR type LIKE '%' || :searchText || '%' ORDER BY id DESC")
     fun searchUrls(searchText: String): Flow<List<Url>>
 
-    @Query("SELECT * FROM url_info WHERE type = 'URL' AND :fullUrl LIKE url || '%' LIMIT 1")
+    @Query("SELECT * FROM url_info WHERE LOWER(type) = 'url' AND :fullUrl LIKE url || '%' LIMIT 1")
     fun findUrlMatch(fullUrl: String): Url?
 
-    @Query("SELECT * FROM url_info WHERE type = 'Domain' AND url = :host LIMIT 1")
+    @Query(
+        """
+        SELECT * FROM url_info
+        WHERE LOWER(type) = 'domain'
+          AND (
+            LOWER(url) = LOWER(:host)
+            OR (
+              SUBSTR(LOWER(url), 1, 2) = '*.'
+              AND LOWER(:host) LIKE '%.' || SUBSTR(LOWER(url), 3)
+            )
+          )
+        ORDER BY CASE WHEN LOWER(url) = LOWER(:host) THEN 0 ELSE 1 END, LENGTH(url) DESC
+        LIMIT 1
+        """
+    )
     fun findDomainMatch(host: String): Url?
 
-    @Query("SELECT * FROM url_info WHERE type = 'KeyWord' AND INSTR(:value, url) > 0 LIMIT 1")
+    @Query("SELECT * FROM url_info WHERE LOWER(type) = 'keyword' AND INSTR(:value, url) > 0 LIMIT 1")
     fun findKeywordMatch(value: String): Url?
 
-    @Query("SELECT COUNT(*) > 0 FROM url_info WHERE type = 'URL' AND :fullUrl LIKE url || '%'")
+    @Query("SELECT COUNT(*) > 0 FROM url_info WHERE LOWER(type) = 'url' AND :fullUrl LIKE url || '%'")
     fun existsUrlMatch(fullUrl: String): Boolean
 
-    @Query("SELECT COUNT(*) > 0 FROM url_info WHERE type = 'Domain' AND url = :host")
+    @Query(
+        """
+        SELECT COUNT(*) > 0 FROM url_info
+        WHERE LOWER(type) = 'domain'
+          AND (
+            LOWER(url) = LOWER(:host)
+            OR (
+              SUBSTR(LOWER(url), 1, 2) = '*.'
+              AND LOWER(:host) LIKE '%.' || SUBSTR(LOWER(url), 3)
+            )
+          )
+        """
+    )
     fun existsDomainMatch(host: String): Boolean
 
-    @Query("SELECT COUNT(*) > 0 FROM url_info WHERE type = 'KeyWord' AND INSTR(:value, url) > 0")
+    @Query("SELECT COUNT(*) > 0 FROM url_info WHERE LOWER(type) = 'keyword' AND INSTR(:value, url) > 0")
     fun existsKeywordMatch(value: String): Boolean
 
     @Query("SELECT COUNT(*) > 0 FROM url_info WHERE url = :url")
     fun isExist(url: String): Boolean
 
-    @Query("SELECT COUNT(*) > 0 FROM url_info WHERE type = :type AND url = :url")
+    @Query(
+        """
+        SELECT COUNT(*) > 0 FROM url_info
+        WHERE LOWER(type) = LOWER(:type)
+          AND (
+            (LOWER(:type) = 'domain' AND LOWER(url) = LOWER(:url))
+            OR (LOWER(:type) != 'domain' AND url = :url)
+          )
+        """
+    )
     fun isExist(type: String, url: String): Boolean
 
     @Delete
@@ -62,7 +97,16 @@ interface UrlDao {
     @Delete
     fun deleteUrl(url: Url): Int
 
-    @Query("DELETE FROM url_info WHERE type = :type AND url = :url")
+    @Query(
+        """
+        DELETE FROM url_info
+        WHERE LOWER(type) = LOWER(:type)
+          AND (
+            (LOWER(:type) = 'domain' AND LOWER(url) = LOWER(:url))
+            OR (LOWER(:type) != 'domain' AND url = :url)
+          )
+        """
+    )
     fun deleteUrlString(type: String, url: String): Int
 
     @Query("DELETE FROM url_info")

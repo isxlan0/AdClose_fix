@@ -237,6 +237,7 @@
     <string name="add_rule">添加规则</string>
     <string name="edit_rule">编辑规则</string>
     <string name="value_empty_error">Value不能为空</string>
+    <string name="invalid_rule_format">规则格式无效</string>
     <string name="rule_exists">规则已存在</string>
     <string name="open_app_details_failed">无法打开应用详情</string>
     <string name="launch_app_failed">打开失败</string>

@@ -10,6 +10,7 @@ import android.net.Uri
 import com.close.hook.ads.data.dao.UrlDao
 import com.close.hook.ads.data.database.UrlDatabase
 import com.close.hook.ads.data.model.Url
+import com.close.hook.ads.util.RuleUtils
 
 class UrlContentProvider : ContentProvider() {
 
@@ -37,10 +38,10 @@ class UrlContentProvider : ContentProvider() {
             urlDao.findAllList()
         } else {
             val (queryType, queryValue) = selectionArgs
-            val result = when (queryType) {
-                "URL" -> urlDao.findUrlMatch(queryValue)
-                "Domain" -> urlDao.findDomainMatch(queryValue)
-                "KeyWord" -> urlDao.findKeywordMatch(queryValue)
+            val result = when (RuleUtils.normalizeType(queryType)) {
+                RuleUtils.TYPE_URL -> urlDao.findUrlMatch(queryValue)
+                RuleUtils.TYPE_DOMAIN -> urlDao.findDomainMatch(queryValue)
+                RuleUtils.TYPE_KEYWORD -> urlDao.findKeywordMatch(queryValue)
                 else -> null
             }
             listOfNotNull(result)
@@ -51,7 +52,9 @@ class UrlContentProvider : ContentProvider() {
     private fun urlsToCursor(urls: List<Url>): MatrixCursor {
         val cursor = MatrixCursor(arrayOf(Url.URL_TYPE, Url.URL_ADDRESS))
         urls.forEach { url ->
-            cursor.addRow(arrayOf(url.type, url.url))
+            val displayType = RuleUtils.normalizeType(url.type) ?: url.type
+            val displayValue = RuleUtils.normalizeValue(displayType, url.url) ?: url.url.trim()
+            cursor.addRow(arrayOf(displayType, displayValue))
         }
         return cursor
     }
@@ -90,7 +93,11 @@ class UrlContentProvider : ContentProvider() {
     }
 
     private fun ContentValues.toUrl(): Url =
-        Url(type = getAsString(Url.URL_TYPE).orEmpty(), url = getAsString(Url.URL_ADDRESS).orEmpty())
+        RuleUtils.normalizeRule(getAsString(Url.URL_TYPE), getAsString(Url.URL_ADDRESS))
+            ?: Url(
+                type = RuleUtils.normalizeType(getAsString(Url.URL_TYPE)) ?: getAsString(Url.URL_TYPE).orEmpty(),
+                url = getAsString(Url.URL_ADDRESS).orEmpty()
+            )
 
     companion object {
         const val AUTHORITY = "com.close.hook.ads.provider.url"

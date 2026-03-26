@@ -243,6 +243,7 @@
     <string name="add_rule">Add rule</string>
     <string name="edit_rule">Edit rule</string>
     <string name="value_empty_error">Value cannot be empty</string>
+    <string name="invalid_rule_format">The rule format is invalid</string>
     <string name="rule_exists">Rule already exists</string>
     <string name="open_app_details_failed">Cannot open application details</string>
     <string name="launch_app_failed">Open failed</string>

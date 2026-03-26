@@ -51,6 +51,7 @@ import com.close.hook.ads.ui.viewmodel.BlockListViewModel
 import com.close.hook.ads.util.INavContainer
 import com.close.hook.ads.util.OnBackPressContainer
 import com.close.hook.ads.util.OnBackPressListener
+import com.close.hook.ads.util.RuleUtils
 import com.close.hook.ads.util.dp
 import com.close.hook.ads.util.FooterSpaceItemDecoration
 import com.google.android.material.behavior.HideBottomViewOnScrollBehavior
@@ -250,7 +251,7 @@ class BlockListFragment : BaseFragment<FragmentBlockListBinding>(), OnBackPressL
     private fun onCopy() {
         selectedItems?.let { selection ->
             val uniqueTypeUrls = selection
-                .map { "${it.type}, ${it.url}" }
+                .mapNotNull { RuleUtils.formatRuleLine(it) }
                 .distinct()
                 .joinToString(separator = "\n")
 
@@ -343,7 +344,7 @@ class BlockListFragment : BaseFragment<FragmentBlockListBinding>(), OnBackPressL
     private fun showRuleDialog(url: Url? = null) {
         val dialogBinding = ItemBlockListAddBinding.inflate(LayoutInflater.from(requireContext()))
         val ruleTypes = arrayOf("Domain", "URL", "KeyWord")
-        var selectedType = url?.type ?: ruleTypes[1]
+        var selectedType = RuleUtils.normalizeType(url?.type) ?: ruleTypes[1]
 
         dialogBinding.editText.setText(url?.url ?: "")
         dialogBinding.type.setText(selectedType)
@@ -375,17 +376,23 @@ class BlockListFragment : BaseFragment<FragmentBlockListBinding>(), OnBackPressL
             .setView(dialogBinding.root)
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(android.R.string.ok) { _, _ ->
-                val newUrl = dialogBinding.editText.text.toString().trim()
+                val rawValue = dialogBinding.editText.text.toString()
 
-                if (newUrl.isEmpty()) {
+                if (rawValue.isBlank()) {
                     Toast.makeText(requireContext(), R.string.value_empty_error, Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
 
-                val newItem = Url(type = selectedType, url = newUrl).also { it.id = url?.id ?: 0L }
+                val normalizedItem = RuleUtils.normalizeRule(selectedType, rawValue)
+                if (normalizedItem == null) {
+                    Toast.makeText(requireContext(), R.string.invalid_rule_format, Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                val newItem = normalizedItem.also { it.id = url?.id ?: 0L }
 
                 lifecycleScope.launch {
-                    val isExist = viewModel.dataSource.isExist(selectedType, newUrl)
+                    val isExist = viewModel.dataSource.isExist(newItem.type, newItem.url)
                     if (url == null) {
                         if (!isExist) {
                             viewModel.addUrl(newItem)
@@ -424,7 +431,7 @@ class BlockListFragment : BaseFragment<FragmentBlockListBinding>(), OnBackPressL
                         val allRules = viewModel.getAllUrls()
                         
                         requireContext().contentResolver.openOutputStream(uri)?.bufferedWriter().use { writer ->
-                            allRules.map { "${it.type}, ${it.url}" }
+                            allRules.mapNotNull { RuleUtils.formatRuleLine(it) }
                                 .distinct()
                                 .filter { it.contains(",") }
                                 .sorted()
@@ -462,19 +469,18 @@ class BlockListFragment : BaseFragment<FragmentBlockListBinding>(), OnBackPressL
                         }
 
                         val currentRules = viewModel.getAllUrls()
-                            .map { "${it.type.lowercase()},${it.url}" }
+                            .mapNotNull { RuleUtils.canonicalKey(it.type, it.url) }
                             .toSet()
 
                         val newUrls = contentResolver.openInputStream(validUri)?.bufferedReader()?.useLines { lines ->
                             lines.mapNotNull { line ->
                                 val parts = line.split(",\\s*".toRegex(), 2).map(String::trim)
-                                if (parts.size == 2 && parts[0].equals("Domain", true) || parts[0].equals("URL", true) || parts[0].equals("KeyWord", true)) {
-                                    Url(parts[0], parts[1])
-                                } else null
+                                if (parts.size != 2) return@mapNotNull null
+                                RuleUtils.normalizeRule(parts[0], parts[1])
                             }.toList()
                         }?.distinct() ?: emptyList()
 
-                        val urlsToAdd = newUrls.filter { "${it.type.lowercase()},${it.url}" !in currentRules }
+                        val urlsToAdd = newUrls.filter { RuleUtils.canonicalKey(it.type, it.url) !in currentRules }
 
                         if (urlsToAdd.isNotEmpty()) {
                             viewModel.addListUrl(urlsToAdd)

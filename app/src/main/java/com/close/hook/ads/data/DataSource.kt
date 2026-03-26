@@ -1,13 +1,11 @@
 package com.close.hook.ads.data
 
 import android.content.Context
-import android.database.Cursor
 import com.close.hook.ads.data.database.UrlDatabase
 import com.close.hook.ads.data.model.Url
-import com.close.hook.ads.util.AppUtils
+import com.close.hook.ads.util.RuleUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
 class DataSource(context: Context) {
@@ -18,8 +16,9 @@ class DataSource(context: Context) {
         if (searchText.isBlank()) urlDao.loadAllList() else urlDao.searchUrls(searchText)
 
     suspend fun addUrl(url: Url) {
-        if (!urlDao.isExist(url.type, url.url)) {
-            urlDao.insert(url)
+        val normalizedUrl = RuleUtils.normalizeRule(url) ?: return
+        if (!urlDao.isExist(normalizedUrl.type, normalizedUrl.url)) {
+            urlDao.insert(normalizedUrl)
         }
     }
 
@@ -38,24 +37,36 @@ class DataSource(context: Context) {
     }
 
     suspend fun addListUrl(list: List<Url>) {
-        if (list.isNotEmpty()) {
-            urlDao.insertAll(list)
+        val normalizedUrls = list.mapNotNull { RuleUtils.normalizeRule(it) }
+            .distinctBy { RuleUtils.canonicalKey(it.type, it.url) }
+        if (normalizedUrls.isNotEmpty()) {
+            urlDao.insertAll(normalizedUrls)
         }
     }
 
     suspend fun updateUrl(url: Url) {
-        urlDao.update(url)
+        RuleUtils.normalizeRule(url)?.let { urlDao.update(it) }
     }
 
     suspend fun removeUrlString(type: String, url: String) {
-        urlDao.deleteUrlString(type, url)
+        val normalizedType = RuleUtils.normalizeType(type) ?: return
+        val normalizedUrl = RuleUtils.normalizeValue(normalizedType, url) ?: return
+        urlDao.deleteUrlString(normalizedType, normalizedUrl)
     }
 
     suspend fun isExist(type: String, url: String): Boolean =
-        withContext(Dispatchers.IO) { urlDao.isExist(type, url) }
+        withContext(Dispatchers.IO) {
+            val normalizedType = RuleUtils.normalizeType(type) ?: return@withContext false
+            val normalizedUrl = RuleUtils.normalizeValue(normalizedType, url) ?: return@withContext false
+            urlDao.isExist(normalizedType, normalizedUrl)
+        }
 
     suspend fun insertAll(urls: List<Url>): List<Long> =
-        withContext(Dispatchers.IO) { urlDao.insertAll(urls) }
+        withContext(Dispatchers.IO) {
+            val normalizedUrls = urls.mapNotNull { RuleUtils.normalizeRule(it) }
+                .distinctBy { RuleUtils.canonicalKey(it.type, it.url) }
+            if (normalizedUrls.isEmpty()) emptyList() else urlDao.insertAll(normalizedUrls)
+        }
 
     suspend fun deleteAll(): Int =
         withContext(Dispatchers.IO) { urlDao.deleteAll() }

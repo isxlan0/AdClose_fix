@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.close.hook.ads.R
 import com.close.hook.ads.data.model.Url
 import com.close.hook.ads.databinding.ItemBlockListBinding
+import com.close.hook.ads.util.RuleUtils
 import com.close.hook.ads.util.dp
 
 class BlockListAdapter(
@@ -83,7 +84,7 @@ class BlockListAdapter(
         fun bind(item: Url, isSelected: Boolean) {
             with(binding) {
                 url.text = item.url
-                type.text = item.type.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+                type.text = RuleUtils.displayType(item.type)
                 cardView.isChecked = isSelected
                 container.setPadding(16.dp, 12.dp, if (isSelected) 35.dp else 16.dp, 12.dp)
             }

@@ -238,4 +238,6 @@ dependencies {
     implementation(libs.appcenterAnalytics)
     implementation(libs.appcenterCrashes)
     implementation(libs.mpandroidchart)
+
+    testImplementation("junit:junit:4.13.2")
 }
