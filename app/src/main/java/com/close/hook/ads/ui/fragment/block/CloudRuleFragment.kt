@@ -34,6 +34,7 @@ import com.close.hook.ads.util.IOnTabClickListener
 import com.close.hook.ads.util.OnBackPressListener
 import com.close.hook.ads.util.OnCLearCLickContainer
 import com.close.hook.ads.util.OnClearClickListener
+import com.close.hook.ads.util.RuleUtils
 import com.close.hook.ads.util.dp
 import com.google.android.material.behavior.HideBottomViewOnScrollBehavior
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -162,6 +163,7 @@ class CloudRuleFragment : BaseFragment<FragmentCloudRuleBinding>(), OnClearClick
     private fun showSourceDialog(source: CloudRuleSourceSummary?) {
         val dialogBinding = DialogCloudRuleSourceBinding.inflate(LayoutInflater.from(requireContext()))
         dialogBinding.urlEditText.setText(source?.url.orEmpty())
+        setSelectedParseType(dialogBinding, source?.parseType ?: RuleUtils.TYPE_DOMAIN)
         dialogBinding.enabledSwitch.isChecked = source?.enabled ?: false
         dialogBinding.autoUpdateSwitch.isChecked = source?.autoUpdateEnabled ?: false
         dialogBinding.intervalEditText.setText(
@@ -192,6 +194,7 @@ class CloudRuleFragment : BaseFragment<FragmentCloudRuleBinding>(), OnClearClick
                 viewModel.saveSource(
                     sourceId = source?.id,
                     url = url,
+                    parseType = getSelectedParseType(dialogBinding),
                     enabled = dialogBinding.enabledSwitch.isChecked,
                     autoUpdateEnabled = dialogBinding.autoUpdateSwitch.isChecked,
                     updateIntervalHoursText = interval
@@ -211,6 +214,26 @@ class CloudRuleFragment : BaseFragment<FragmentCloudRuleBinding>(), OnClearClick
                 viewModel.deleteSource(source.id)
             }
             .show()
+    }
+
+    private fun setSelectedParseType(
+        dialogBinding: DialogCloudRuleSourceBinding,
+        parseType: String
+    ) {
+        val buttonId = when (RuleUtils.normalizeType(parseType)) {
+            RuleUtils.TYPE_URL -> R.id.buttonParseUrl
+            RuleUtils.TYPE_KEYWORD -> R.id.buttonParseKeyword
+            else -> R.id.buttonParseDomain
+        }
+        dialogBinding.parseTypeGroup.check(buttonId)
+    }
+
+    private fun getSelectedParseType(dialogBinding: DialogCloudRuleSourceBinding): String {
+        return when (dialogBinding.parseTypeGroup.checkedButtonId) {
+            R.id.buttonParseUrl -> RuleUtils.TYPE_URL
+            R.id.buttonParseKeyword -> RuleUtils.TYPE_KEYWORD
+            else -> RuleUtils.TYPE_DOMAIN
+        }
     }
 
     override fun search(keyWord: String) {

@@ -20,6 +20,9 @@ data class CloudRuleSource(
     @ColumnInfo(name = "url")
     val url: String,
 
+    @ColumnInfo(name = "parse_type")
+    val parseType: String = "Domain",
+
     @ColumnInfo(name = "enabled")
     val enabled: Boolean = false,
 

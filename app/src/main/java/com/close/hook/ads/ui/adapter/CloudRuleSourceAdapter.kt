@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.close.hook.ads.R
 import com.close.hook.ads.data.model.CloudRuleSourceSummary
 import com.close.hook.ads.databinding.ItemCloudRuleSourceBinding
+import com.close.hook.ads.util.RuleUtils
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -53,6 +54,10 @@ class CloudRuleSourceAdapter(
                 item.domainCount,
                 item.urlCount,
                 item.keywordCount
+            )
+            binding.textParseType.text = context.getString(
+                R.string.cloud_rule_parse_as_value,
+                getParseTypeLabel(item.parseType, context)
             )
             binding.textInterval.text = context.getString(
                 R.string.cloud_rule_update_interval_value,
@@ -112,6 +117,15 @@ class CloudRuleSourceAdapter(
 
         @SuppressLint("SimpleDateFormat")
         private val DATE_FORMAT = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+
+        private fun getParseTypeLabel(parseType: String, context: android.content.Context): String {
+            return when (RuleUtils.normalizeType(parseType)) {
+                RuleUtils.TYPE_DOMAIN -> context.getString(R.string.cloud_rule_parse_domain)
+                RuleUtils.TYPE_URL -> context.getString(R.string.cloud_rule_parse_url)
+                RuleUtils.TYPE_KEYWORD -> context.getString(R.string.cloud_rule_parse_keyword)
+                else -> parseType
+            }
+        }
 
         private fun formatTimestamp(timestamp: Long?, fallback: String): String {
             return timestamp?.let { DATE_FORMAT.format(Date(it)) } ?: fallback

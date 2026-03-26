@@ -42,6 +42,7 @@ class CloudRuleRepository private constructor(context: Context) {
                 sourceDao.insert(
                     CloudRuleSource(
                         url = DEFAULT_SOURCE_URL,
+                        parseType = RuleUtils.TYPE_DOMAIN,
                         enabled = false,
                         autoUpdateEnabled = false,
                         updateIntervalHours = DEFAULT_UPDATE_INTERVAL_HOURS
@@ -54,12 +55,15 @@ class CloudRuleRepository private constructor(context: Context) {
 
     suspend fun addSource(
         rawUrl: String,
+        parseType: String,
         enabled: Boolean,
         autoUpdateEnabled: Boolean,
         updateIntervalHours: Long
     ): CloudRuleOperationResult {
         val normalizedUrl = normalizeSourceUrl(rawUrl)
             ?: return CloudRuleOperationResult(false, "invalid_url")
+        val normalizedParseType = RuleUtils.normalizeType(parseType)
+            ?: return CloudRuleOperationResult(false, "invalid_parse_type")
         val normalizedInterval = normalizeIntervalHours(updateIntervalHours)
             ?: return CloudRuleOperationResult(false, "invalid_interval")
 
@@ -70,6 +74,7 @@ class CloudRuleRepository private constructor(context: Context) {
                 sourceDao.insert(
                     CloudRuleSource(
                         url = normalizedUrl,
+                        parseType = normalizedParseType,
                         enabled = enabled,
                         autoUpdateEnabled = autoUpdateEnabled,
                         updateIntervalHours = normalizedInterval
@@ -83,12 +88,15 @@ class CloudRuleRepository private constructor(context: Context) {
     suspend fun updateSource(
         sourceId: Long,
         rawUrl: String,
+        parseType: String,
         enabled: Boolean,
         autoUpdateEnabled: Boolean,
         updateIntervalHours: Long
     ): CloudRuleOperationResult {
         val normalizedUrl = normalizeSourceUrl(rawUrl)
             ?: return CloudRuleOperationResult(false, "invalid_url")
+        val normalizedParseType = RuleUtils.normalizeType(parseType)
+            ?: return CloudRuleOperationResult(false, "invalid_parse_type")
         val normalizedInterval = normalizeIntervalHours(updateIntervalHours)
             ?: return CloudRuleOperationResult(false, "invalid_interval")
 
@@ -104,6 +112,7 @@ class CloudRuleRepository private constructor(context: Context) {
             sourceDao.update(
                 current.copy(
                     url = normalizedUrl,
+                    parseType = normalizedParseType,
                     enabled = enabled,
                     autoUpdateEnabled = autoUpdateEnabled,
                     updateIntervalHours = normalizedInterval,
@@ -160,12 +169,15 @@ class CloudRuleRepository private constructor(context: Context) {
         val now = System.currentTimeMillis()
         return try {
             val content = downloadSourceContent(source.url)
-            val parsedRules = parseRuleContent(source.id, content)
+            val parsedRules = parseRuleContent(source, content)
+            if (parsedRules.entries.isEmpty()) {
+                throw IllegalArgumentException("no_valid_rules")
+            }
 
             database.withTransaction {
                 entryDao.deleteBySourceId(source.id)
-                if (parsedRules.isNotEmpty()) {
-                    entryDao.insertAll(parsedRules)
+                if (parsedRules.entries.isNotEmpty()) {
+                    entryDao.insertAll(parsedRules.entries)
                 }
                 sourceDao.update(
                     source.copy(
@@ -222,19 +234,94 @@ class CloudRuleRepository private constructor(context: Context) {
         }
     }
 
-    private fun parseRuleContent(sourceId: Long, content: String): List<CloudRuleEntry> {
-        return content.lineSequence()
+    private fun parseRuleContent(source: CloudRuleSource, content: String): ParseRuleContentResult {
+        val entries = content.lineSequence()
             .map(String::trim)
-            .filter { it.isNotEmpty() && !it.startsWith("#") }
+            .filterNot(::shouldSkipRuleLine)
             .mapNotNull { line ->
-                val parts = line.split(",\\s*".toRegex(), 2).map(String::trim)
-                if (parts.size != 2) return@mapNotNull null
-                RuleUtils.normalizeRule(parts[0], parts[1])?.let {
-                    CloudRuleEntry(sourceId = sourceId, type = it.type, url = it.url)
-                }
+                parseRuleLine(source.id, source.parseType, line)
             }
             .distinctBy { RuleUtils.canonicalKey(it.type, it.url) }
             .toList()
+        return ParseRuleContentResult(entries)
+    }
+
+    private fun shouldSkipRuleLine(line: String): Boolean {
+        return line.isBlank() ||
+            line.startsWith("#") ||
+            line.startsWith("!") ||
+            line.startsWith("[")
+    }
+
+    private fun parseRuleLine(sourceId: Long, parseType: String, line: String): CloudRuleEntry? {
+        parseExplicitRuleLine(sourceId, line)?.let { return it }
+
+        return when (RuleUtils.normalizeType(parseType)) {
+            RuleUtils.TYPE_DOMAIN -> parseDomainRuleLine(sourceId, line)
+            RuleUtils.TYPE_URL -> parseNormalizedRuleLine(sourceId, RuleUtils.TYPE_URL, line)
+            RuleUtils.TYPE_KEYWORD -> parseNormalizedRuleLine(sourceId, RuleUtils.TYPE_KEYWORD, line)
+            else -> null
+        }
+    }
+
+    private fun parseExplicitRuleLine(sourceId: Long, line: String): CloudRuleEntry? {
+        val parts = line.split(",\\s*".toRegex(), 2).map(String::trim)
+        if (parts.size != 2) return null
+        return RuleUtils.normalizeRule(parts[0], parts[1])?.toCloudRuleEntry(sourceId)
+    }
+
+    private fun parseDomainRuleLine(sourceId: Long, line: String): CloudRuleEntry? {
+        val candidates = buildList {
+            add(line)
+            extractHostsDomain(line)?.let(::add)
+            extractAdblockDomain(line)?.let(::add)
+            extractPlainDomain(line)?.let(::add)
+        }
+
+        return candidates.firstNotNullOfOrNull { candidate ->
+            RuleUtils.normalizeRule(RuleUtils.TYPE_DOMAIN, candidate)?.toCloudRuleEntry(sourceId)
+        }
+    }
+
+    private fun parseNormalizedRuleLine(sourceId: Long, type: String, value: String): CloudRuleEntry? {
+        return RuleUtils.normalizeRule(type, value)?.toCloudRuleEntry(sourceId)
+    }
+
+    private fun extractHostsDomain(line: String): String? {
+        val parts = line.split(WHITESPACE_REGEX)
+        if (parts.size < 2) return null
+        if (!isHostsAddressToken(parts[0])) return null
+        return parts.drop(1).firstOrNull { token ->
+            token.isNotBlank() &&
+                !token.startsWith("#") &&
+                !token.startsWith("!")
+        }
+    }
+
+    private fun extractPlainDomain(line: String): String? {
+        val candidate = line.substringBefore('#').trim()
+        if (candidate.isEmpty() || candidate.any(Char::isWhitespace)) return null
+        return candidate
+    }
+
+    private fun extractAdblockDomain(line: String): String? {
+        val normalized = line.trim()
+        if (!normalized.startsWith("||") || normalized.startsWith("@@||")) return null
+        val body = normalized.removePrefix("||")
+        val stopIndex = body.indexOfAny(charArrayOf('^', '/', '$', '|'))
+        val candidate = if (stopIndex >= 0) body.substring(0, stopIndex) else body
+        return candidate.takeIf { it.isNotBlank() }
+    }
+
+    private fun isHostsAddressToken(token: String): Boolean {
+        val normalized = token.trim().lowercase(Locale.ROOT)
+        return normalized == "0" ||
+            HOSTS_IPV4_REGEX.matches(normalized) ||
+            HOSTS_IPV6_REGEX.matches(normalized)
+    }
+
+    private fun com.close.hook.ads.data.model.Url.toCloudRuleEntry(sourceId: Long): CloudRuleEntry {
+        return CloudRuleEntry(sourceId = sourceId, type = type, url = url)
     }
 
     private fun normalizeSourceUrl(rawUrl: String): String? {
@@ -258,6 +345,9 @@ class CloudRuleRepository private constructor(context: Context) {
         private const val KEY_DEFAULT_SOURCE_INITIALIZED = "cloud_rule_default_source_initialized"
         private const val NETWORK_TIMEOUT_MILLIS = 15_000
         private const val MAX_ERROR_MESSAGE_LENGTH = 300
+        private val WHITESPACE_REGEX = "\\s+".toRegex()
+        private val HOSTS_IPV4_REGEX = Regex("""\d{1,3}(?:\.\d{1,3}){3}""")
+        private val HOSTS_IPV6_REGEX = Regex("""[0-9a-f:.]+""")
         const val DEFAULT_SOURCE_URL =
             "https://raw.githubusercontent.com/TG-Twilight/AWAvenue-Ads-Rule/main/Filters/AWAvenue-Ads-Rule-AdClose.rule"
         const val DEFAULT_UPDATE_INTERVAL_HOURS = 24L
@@ -273,3 +363,7 @@ class CloudRuleRepository private constructor(context: Context) {
         }
     }
 }
+
+private data class ParseRuleContentResult(
+    val entries: List<CloudRuleEntry>
+)

@@ -15,7 +15,7 @@ import com.close.hook.ads.data.model.Url
 
 @Database(
     entities = [Url::class, CloudRuleSource::class, CloudRuleEntry::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class UrlDatabase : RoomDatabase() {
@@ -87,6 +87,12 @@ abstract class UrlDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_5_6: Migration = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE cloud_rule_source ADD COLUMN parse_type TEXT NOT NULL DEFAULT 'Domain'")
+            }
+        }
+
         fun getDatabase(context: Context): UrlDatabase =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
@@ -94,7 +100,7 @@ abstract class UrlDatabase : RoomDatabase() {
                     UrlDatabase::class.java,
                     "url_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .build().also {
                     instance = it
                 }

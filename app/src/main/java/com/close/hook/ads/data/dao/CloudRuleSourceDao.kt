@@ -34,6 +34,7 @@ interface CloudRuleSourceDao {
         SELECT
             s.id AS id,
             s.url AS url,
+            s.parse_type AS parseType,
             s.enabled AS enabled,
             s.auto_update_enabled AS autoUpdateEnabled,
             s.update_interval_hours AS updateIntervalHours,

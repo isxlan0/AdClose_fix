@@ -3,6 +3,7 @@ package com.close.hook.ads.data.model
 data class CloudRuleSourceSummary(
     val id: Long,
     val url: String,
+    val parseType: String,
     val enabled: Boolean,
     val autoUpdateEnabled: Boolean,
     val updateIntervalHours: Long,

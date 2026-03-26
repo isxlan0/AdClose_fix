@@ -245,6 +245,11 @@
     <string name="cloud_rule_add_source">新增規則來源</string>
     <string name="cloud_rule_edit_source">編輯規則來源</string>
     <string name="cloud_rule_source_url">規則來源連結</string>
+    <string name="cloud_rule_parse_type">解析類型</string>
+    <string name="cloud_rule_parse_as_value">解析為：%1$s</string>
+    <string name="cloud_rule_parse_domain">網域</string>
+    <string name="cloud_rule_parse_url">URL</string>
+    <string name="cloud_rule_parse_keyword">關鍵字</string>
     <string name="cloud_rule_enabled">啟用</string>
     <string name="cloud_rule_auto_update">自動更新</string>
     <string name="cloud_rule_update_interval_hours">更新間隔（小時）</string>
@@ -263,8 +268,10 @@
     <string name="cloud_rule_source_deleted">已刪除雲規則來源</string>
     <string name="cloud_rule_sync_success">雲規則已更新</string>
     <string name="cloud_rule_invalid_url">請輸入有效的 HTTP 或 HTTPS 連結</string>
+    <string name="cloud_rule_invalid_parse_type">請選擇有效的解析類型</string>
     <string name="cloud_rule_invalid_interval">請輸入不少於 1 小時的更新間隔</string>
     <string name="cloud_rule_duplicate_source">此雲規則來源已存在</string>
+    <string name="cloud_rule_no_valid_rules">這個規則來源沒有可用的有效規則</string>
     <string name="cloud_rule_source_not_found">找不到此雲規則來源</string>
     <string name="cloud_rule_sync_failed_with_reason">雲規則更新失敗：%1$s</string>
     <string name="open_app_details_failed">無法開啟應用程式詳細資料</string>

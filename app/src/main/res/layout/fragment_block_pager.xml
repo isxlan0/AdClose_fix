@@ -132,12 +132,4 @@
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
-    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-        android:id="@+id/cloudRulesFab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/cloud_rules"
-        android:visibility="gone"
-        app:icon="@drawable/ic_outline_folder_managed_24" />
-
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

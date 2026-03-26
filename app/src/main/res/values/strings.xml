@@ -252,6 +252,11 @@
     <string name="cloud_rule_add_source">Add source</string>
     <string name="cloud_rule_edit_source">Edit source</string>
     <string name="cloud_rule_source_url">Source URL</string>
+    <string name="cloud_rule_parse_type">Parse type</string>
+    <string name="cloud_rule_parse_as_value">Parse as: %1$s</string>
+    <string name="cloud_rule_parse_domain">Domain</string>
+    <string name="cloud_rule_parse_url">URL</string>
+    <string name="cloud_rule_parse_keyword">KeyWord</string>
     <string name="cloud_rule_enabled">Enabled</string>
     <string name="cloud_rule_auto_update">Auto update</string>
     <string name="cloud_rule_update_interval_hours">Update interval (hours)</string>
@@ -270,8 +275,10 @@
     <string name="cloud_rule_source_deleted">Cloud source deleted</string>
     <string name="cloud_rule_sync_success">Cloud rules updated</string>
     <string name="cloud_rule_invalid_url">Please enter a valid HTTP or HTTPS URL</string>
+    <string name="cloud_rule_invalid_parse_type">Please select a valid parse type</string>
     <string name="cloud_rule_invalid_interval">Please enter an interval of at least 1 hour</string>
     <string name="cloud_rule_duplicate_source">This cloud source already exists</string>
+    <string name="cloud_rule_no_valid_rules">No valid rules were found in this source</string>
     <string name="cloud_rule_source_not_found">The cloud source was not found</string>
     <string name="cloud_rule_sync_failed_with_reason">Cloud rule update failed: %1$s</string>
     <string name="open_app_details_failed">Cannot open application details</string>

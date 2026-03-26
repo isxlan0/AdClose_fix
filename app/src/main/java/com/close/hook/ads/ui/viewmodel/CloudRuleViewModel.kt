@@ -51,6 +51,7 @@ class CloudRuleViewModel(application: Application) : AndroidViewModel(applicatio
     fun saveSource(
         sourceId: Long?,
         url: String,
+        parseType: String,
         enabled: Boolean,
         autoUpdateEnabled: Boolean,
         updateIntervalHoursText: String
@@ -60,9 +61,9 @@ class CloudRuleViewModel(application: Application) : AndroidViewModel(applicatio
             sourceId?.let { markWorking(it, true) }
             try {
                 val result = if (sourceId == null) {
-                    repository.addSource(url, enabled, autoUpdateEnabled, intervalHours)
+                    repository.addSource(url, parseType, enabled, autoUpdateEnabled, intervalHours)
                 } else {
-                    repository.updateSource(sourceId, url, enabled, autoUpdateEnabled, intervalHours)
+                    repository.updateSource(sourceId, url, parseType, enabled, autoUpdateEnabled, intervalHours)
                 }
                 val message = if (result.success) {
                     app.getString(
@@ -145,8 +146,10 @@ class CloudRuleViewModel(application: Application) : AndroidViewModel(applicatio
     ): String {
         return when (result.message) {
             "invalid_url" -> app.getString(R.string.cloud_rule_invalid_url)
+            "invalid_parse_type" -> app.getString(R.string.cloud_rule_invalid_parse_type)
             "invalid_interval" -> app.getString(R.string.cloud_rule_invalid_interval)
             "duplicate_url" -> app.getString(R.string.cloud_rule_duplicate_source)
+            "no_valid_rules" -> app.getString(R.string.cloud_rule_no_valid_rules)
             "not_found", null -> app.getString(R.string.cloud_rule_source_not_found)
             else -> {
                 if (syncFailure) {
