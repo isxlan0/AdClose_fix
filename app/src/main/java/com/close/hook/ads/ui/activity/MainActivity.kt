@@ -5,12 +5,14 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.close.hook.ads.R
+import com.close.hook.ads.data.repository.CloudRuleRepository
 import com.close.hook.ads.preference.PrefManager
 import com.close.hook.ads.ui.fragment.app.AppsPagerFragment
-import com.close.hook.ads.ui.fragment.block.BlockListFragment
+import com.close.hook.ads.ui.fragment.block.BlockPagerFragment
 import com.close.hook.ads.ui.fragment.home.HomeFragment
 import com.close.hook.ads.ui.fragment.request.RequestFragment
 import com.close.hook.ads.ui.fragment.settings.SettingsFragment
@@ -19,6 +21,8 @@ import com.close.hook.ads.util.OnBackPressContainer
 import com.close.hook.ads.util.OnBackPressListener
 import com.google.android.material.behavior.HideBottomViewOnScrollBehavior
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : BaseActivity(), OnBackPressContainer, INavContainer {
 
@@ -32,7 +36,7 @@ class MainActivity : BaseActivity(), OnBackPressContainer, INavContainer {
         ::AppsPagerFragment,
         ::RequestFragment,
         ::HomeFragment,
-        ::BlockListFragment,
+        ::BlockPagerFragment,
         ::SettingsFragment
     )
 
@@ -40,6 +44,13 @@ class MainActivity : BaseActivity(), OnBackPressContainer, INavContainer {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setupViewPagerAndBottomNavigation()
+        if (savedInstanceState == null) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                val repository = CloudRuleRepository.getInstance(this@MainActivity)
+                repository.ensureDefaultSourceInitialized()
+                repository.syncDueSources()
+            }
+        }
     }
 
     private fun setupViewPagerAndBottomNavigation() {

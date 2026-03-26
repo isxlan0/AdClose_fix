@@ -7,6 +7,7 @@ import android.content.UriMatcher
 import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
+import com.close.hook.ads.data.dao.CloudRuleEntryDao
 import com.close.hook.ads.data.dao.UrlDao
 import com.close.hook.ads.data.database.UrlDatabase
 import com.close.hook.ads.data.model.Url
@@ -15,9 +16,12 @@ import com.close.hook.ads.util.RuleUtils
 class UrlContentProvider : ContentProvider() {
 
     private lateinit var urlDao: UrlDao
+    private lateinit var cloudRuleEntryDao: CloudRuleEntryDao
 
     override fun onCreate(): Boolean = context?.let {
-        urlDao = UrlDatabase.getDatabase(it).urlDao
+        val database = UrlDatabase.getDatabase(it)
+        urlDao = database.urlDao
+        cloudRuleEntryDao = database.cloudRuleEntryDao
         true
     } ?: false
 
@@ -38,15 +42,30 @@ class UrlContentProvider : ContentProvider() {
             urlDao.findAllList()
         } else {
             val (queryType, queryValue) = selectionArgs
-            val result = when (RuleUtils.normalizeType(queryType)) {
-                RuleUtils.TYPE_URL -> urlDao.findUrlMatch(queryValue)
-                RuleUtils.TYPE_DOMAIN -> urlDao.findDomainMatch(queryValue)
-                RuleUtils.TYPE_KEYWORD -> urlDao.findKeywordMatch(queryValue)
-                else -> null
-            }
+            val result = findMatch(queryType, queryValue)
             listOfNotNull(result)
         }
         return urlsToCursor(urls)
+    }
+
+    private fun findMatch(queryType: String, queryValue: String): Url? {
+        val normalizedType = RuleUtils.normalizeType(queryType) ?: return null
+        val manualMatch = when (normalizedType) {
+            RuleUtils.TYPE_URL -> urlDao.findUrlMatch(queryValue)
+            RuleUtils.TYPE_DOMAIN -> urlDao.findDomainMatch(queryValue)
+            RuleUtils.TYPE_KEYWORD -> urlDao.findKeywordMatch(queryValue)
+            else -> null
+        }
+        if (manualMatch != null) return manualMatch
+
+        val cloudMatch = when (normalizedType) {
+            RuleUtils.TYPE_URL -> cloudRuleEntryDao.findEnabledUrlMatch(queryValue)
+            RuleUtils.TYPE_DOMAIN -> cloudRuleEntryDao.findEnabledDomainMatch(queryValue)
+            RuleUtils.TYPE_KEYWORD -> cloudRuleEntryDao.findEnabledKeywordMatch(queryValue)
+            else -> null
+        } ?: return null
+
+        return Url(type = cloudMatch.type, url = cloudMatch.url)
     }
 
     private fun urlsToCursor(urls: List<Url>): MatrixCursor {
