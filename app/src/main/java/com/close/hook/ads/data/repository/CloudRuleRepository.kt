@@ -10,6 +10,7 @@ import com.close.hook.ads.data.model.CloudRuleSource
 import com.close.hook.ads.data.model.CloudRuleSourceSummary
 import com.close.hook.ads.preference.HookPrefs
 import com.close.hook.ads.provider.UrlContentProvider
+import com.close.hook.ads.rule.RuleSnapshotBuilder
 import com.close.hook.ads.util.RuleUtils
 import kotlinx.coroutines.flow.Flow
 import java.io.BufferedReader
@@ -31,6 +32,7 @@ class CloudRuleRepository private constructor(context: Context) {
     private val database = UrlDatabase.getDatabase(appContext)
     private val sourceDao: CloudRuleSourceDao = database.cloudRuleSourceDao
     private val entryDao: CloudRuleEntryDao = database.cloudRuleEntryDao
+    private val snapshotBuilder = RuleSnapshotBuilder.getInstance(appContext)
 
     fun observeSourceSummaries(searchText: String): Flow<List<CloudRuleSourceSummary>> {
         return sourceDao.observeSummaries(searchText.trim())
@@ -209,6 +211,9 @@ class CloudRuleRepository private constructor(context: Context) {
 
     private fun notifyIfSuccess(result: CloudRuleOperationResult) {
         if (result.success) {
+            if (!snapshotBuilder.rebuild()) {
+                snapshotBuilder.invalidate()
+            }
             UrlContentProvider.notifyRulesChanged(appContext)
         }
     }

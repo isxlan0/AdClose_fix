@@ -85,4 +85,20 @@ class RuleUtilsTest {
 
         assertEquals(listOf("*.example.com"), candidates)
     }
+
+    @Test
+    fun `buildUrlPrefixCandidates returns longest prefixes first`() {
+        val candidates = RuleUtils.buildUrlPrefixCandidates("https://example.com/path")
+
+        assertEquals("https://example.com/path", candidates.first())
+        assertEquals("h", candidates.last())
+        assertEquals("https://example.com/pat", candidates[1])
+    }
+
+    @Test
+    fun `buildUrlPrefixCandidates trims input and ignores blanks`() {
+        assertEquals(listOf("abc", "ab", "a"), RuleUtils.buildUrlPrefixCandidates("  abc  "))
+        assertTrue(RuleUtils.buildUrlPrefixCandidates("   ").isEmpty())
+        assertTrue(RuleUtils.buildUrlPrefixCandidates(null).isEmpty())
+    }
 }

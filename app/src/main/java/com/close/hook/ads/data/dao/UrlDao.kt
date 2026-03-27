@@ -38,6 +38,17 @@ interface UrlDao {
     @Query(
         """
         SELECT * FROM url_info
+        WHERE type = 'URL'
+          AND url IN (:candidates)
+        ORDER BY LENGTH(url) DESC
+        LIMIT 1
+        """
+    )
+    fun findUrlMatchByCandidates(candidates: List<String>): Url?
+
+    @Query(
+        """
+        SELECT * FROM url_info
         WHERE LOWER(type) = 'domain'
           AND (
             LOWER(url) = LOWER(:host)

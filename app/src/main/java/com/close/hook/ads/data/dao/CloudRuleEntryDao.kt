@@ -20,6 +20,15 @@ interface CloudRuleEntryDao {
         SELECT e.* FROM cloud_rule_entry e
         INNER JOIN cloud_rule_source s ON s.id = e.source_id
         WHERE s.enabled = 1
+        """
+    )
+    fun findEnabledEntries(): List<CloudRuleEntry>
+
+    @Query(
+        """
+        SELECT e.* FROM cloud_rule_entry e
+        INNER JOIN cloud_rule_source s ON s.id = e.source_id
+        WHERE s.enabled = 1
           AND LOWER(e.type) = 'url'
           AND :fullUrl LIKE e.url || '%'
         ORDER BY LENGTH(e.url) DESC
@@ -27,6 +36,19 @@ interface CloudRuleEntryDao {
         """
     )
     fun findEnabledUrlMatch(fullUrl: String): CloudRuleEntry?
+
+    @Query(
+        """
+        SELECT e.* FROM cloud_rule_entry e
+        INNER JOIN cloud_rule_source s ON s.id = e.source_id
+        WHERE s.enabled = 1
+          AND e.type = 'URL'
+          AND e.url IN (:candidates)
+        ORDER BY LENGTH(e.url) DESC
+        LIMIT 1
+        """
+    )
+    fun findEnabledUrlMatchByCandidates(candidates: List<String>): CloudRuleEntry?
 
     @Query(
         """

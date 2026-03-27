@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import com.close.hook.ads.preference.PrefManager
 import com.close.hook.ads.preference.PrefManager.darkTheme
 import com.close.hook.ads.manager.ServiceManager
+import com.close.hook.ads.rule.RuleSnapshotBuilder
 import com.microsoft.appcenter.AppCenter
 import com.microsoft.appcenter.analytics.Analytics
 import com.microsoft.appcenter.crashes.Crashes
@@ -20,6 +21,15 @@ class CloseApplication : Application() {
         closeApp = this
 
         ServiceManager.init()
+        Thread({
+            val builder = RuleSnapshotBuilder.getInstance(this)
+            if (!builder.rebuild()) {
+                builder.invalidate()
+            }
+        }, "AdClose-RuleSnapshotInit").apply {
+            isDaemon = true
+            start()
+        }
 
         initAppCenter()
         AppCompatDelegate.setDefaultNightMode(darkTheme)

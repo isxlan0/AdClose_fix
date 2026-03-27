@@ -95,6 +95,17 @@ object RuleUtils {
         return candidates.toList()
     }
 
+    fun buildUrlPrefixCandidates(value: String?): List<String> {
+        val normalizedValue = normalizeValue(TYPE_URL, value) ?: return emptyList()
+        if (normalizedValue.isEmpty()) return emptyList()
+
+        val candidates = ArrayList<String>(normalizedValue.length)
+        for (endIndex in normalizedValue.length downTo 1) {
+            candidates.add(normalizedValue.substring(0, endIndex))
+        }
+        return candidates
+    }
+
     private fun normalizeDomainValue(rawValue: String): String? {
         val trimmedValue = rawValue.trim()
         if (trimmedValue.isEmpty()) return null

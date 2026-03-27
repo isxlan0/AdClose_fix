@@ -4,6 +4,7 @@ import android.content.Context
 import com.close.hook.ads.data.database.UrlDatabase
 import com.close.hook.ads.data.model.Url
 import com.close.hook.ads.provider.UrlContentProvider
+import com.close.hook.ads.rule.RuleSnapshotBuilder
 import com.close.hook.ads.util.RuleUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -13,6 +14,7 @@ class DataSource(context: Context) {
 
     private val appContext = context.applicationContext
     private val urlDao = UrlDatabase.getDatabase(appContext).urlDao
+    private val snapshotBuilder = RuleSnapshotBuilder.getInstance(appContext)
 
     fun searchUrls(searchText: String): Flow<List<Url>> =
         if (searchText.isBlank()) urlDao.loadAllList() else urlDao.searchUrls(searchText)
@@ -119,6 +121,9 @@ class DataSource(context: Context) {
     }
 
     private fun notifyRulesChanged() {
+        if (!snapshotBuilder.rebuild()) {
+            snapshotBuilder.invalidate()
+        }
         UrlContentProvider.notifyRulesChanged(appContext)
     }
 }

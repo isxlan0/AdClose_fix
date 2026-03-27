@@ -15,7 +15,9 @@ import com.close.hook.ads.hook.util.HookUtil
 import com.close.hook.ads.preference.HookPrefs
 import com.close.hook.ads.provider.TemporaryFileProvider
 import com.close.hook.ads.provider.UrlContentProvider
+import com.close.hook.ads.rule.RuleSnapshotManager
 import com.close.hook.ads.util.AppUtils
+import com.close.hook.ads.util.RuleUtils
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import de.robv.android.xposed.XC_MethodHook
@@ -91,10 +93,12 @@ object RequestHook {
                 }
                 val observer = object : ContentObserver(Handler(mainLooper)) {
                     override fun onChange(selfChange: Boolean) {
+                        RuleSnapshotManager.markStale()
                         queryCache.invalidateAll()
                     }
 
                     override fun onChange(selfChange: Boolean, uri: Uri?) {
+                        RuleSnapshotManager.markStale()
                         queryCache.invalidateAll()
                     }
                 }
@@ -187,9 +191,24 @@ object RequestHook {
 
     internal fun checkShouldBlockRequest(info: BlockedRequest?): Boolean {
         info ?: return false
-        val blockResult = sequenceOf("URL", "Domain", "KeyWord")
+        val requestValue = info.requestValue
+        val hostValue = AppUtils.extractHostOrSelf(requestValue)
+
+        RuleSnapshotManager.current(applicationContext)?.let { matcher ->
+            val snapshotBlockResult = matcher.matchUrl(requestValue)
+                ?: matcher.matchDomain(hostValue)
+                ?: matcher.matchKeyword(requestValue)
+            if (snapshotBlockResult != null) {
+                sendBroadcast(info, true, snapshotBlockResult.type, snapshotBlockResult.ruleValue)
+                return true
+            }
+            sendBroadcast(info, false, null, null)
+            return false
+        }
+
+        val blockResult = sequenceOf(RuleUtils.TYPE_URL, RuleUtils.TYPE_DOMAIN, RuleUtils.TYPE_KEYWORD)
             .mapNotNull { type ->
-                val value = if (type == "Domain") AppUtils.extractHostOrSelf(info.requestValue) else info.requestValue
+                val value = if (type == RuleUtils.TYPE_DOMAIN) hostValue else requestValue
                 val result = queryContentProvider(type, value)
                 if (result.first) result else null
             }
