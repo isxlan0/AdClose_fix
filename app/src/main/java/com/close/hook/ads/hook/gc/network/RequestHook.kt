@@ -75,28 +75,38 @@ object RequestHook {
         .build()
 
     fun init(context: Context) {
-        applicationContext = context.applicationContext
-        registerRuleChangeObserver()
+        applicationContext = context
+        registerRuleChangeObserverAsync()
     }
 
-    private fun registerRuleChangeObserver() {
+    private fun registerRuleChangeObserverAsync() {
         if (!isRuleObserverRegistered.compareAndSet(false, true)) return
 
-        try {
-            val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
-                override fun onChange(selfChange: Boolean) {
-                    queryCache.invalidateAll()
+        Thread({
+            try {
+                val mainLooper = Looper.getMainLooper()
+                if (mainLooper == null) {
+                    isRuleObserverRegistered.set(false)
+                    return@Thread
                 }
+                val observer = object : ContentObserver(Handler(mainLooper)) {
+                    override fun onChange(selfChange: Boolean) {
+                        queryCache.invalidateAll()
+                    }
 
-                override fun onChange(selfChange: Boolean, uri: Uri?) {
-                    queryCache.invalidateAll()
+                    override fun onChange(selfChange: Boolean, uri: Uri?) {
+                        queryCache.invalidateAll()
+                    }
                 }
+                applicationContext.contentResolver.registerContentObserver(URL_CONTENT_URI, true, observer)
+                ruleChangeObserver = observer
+            } catch (e: Throwable) {
+                isRuleObserverRegistered.set(false)
+                XposedBridge.log("$LOG_PREFIX Failed to register rule observer: ${e.message}")
             }
-            applicationContext.contentResolver.registerContentObserver(URL_CONTENT_URI, true, observer)
-            ruleChangeObserver = observer
-        } catch (e: Exception) {
-            isRuleObserverRegistered.set(false)
-            XposedBridge.log("$LOG_PREFIX Failed to register rule observer: ${e.message}")
+        }, "AdClose-RuleObserver").apply {
+            isDaemon = true
+            start()
         }
     }
 
