@@ -25,7 +25,6 @@ import com.close.hook.ads.util.LangList
 import com.close.hook.ads.preference.PrefManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import rikka.core.util.ResourceUtils
-import rikka.material.app.LocaleDelegate
 import rikka.material.preference.MaterialSwitchPreference
 import rikka.preference.SimpleMenuPreference
 import java.util.Locale
@@ -143,7 +142,7 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
                 for (lang in LangList.LOCALES) {
                     if (lang == "SYSTEM") add(getString(rikka.core.R.string.follow_system))
                     else {
-                        val locale = Locale.forLanguageTag(lang)
+                        val locale = closeApp.getLocale(lang)
                         add(HtmlCompat.fromHtml(locale.getDisplayName(locale), HtmlCompat.FROM_HTML_MODE_LEGACY))
                     }
                 }
@@ -153,8 +152,7 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
             setLanguageSummary(it, userLocale)
 
             it.setOnPreferenceChangeListener { _, newValue ->
-                val locale = closeApp.getLocale(newValue as String)
-                updateLocale(locale)
+                updateLocale(newValue as String)
                 true
             }
         }
@@ -164,17 +162,14 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
         if (preference.value == "SYSTEM") {
             preference.summary = getString(rikka.core.R.string.follow_system)
         } else {
-            val locale = Locale.forLanguageTag(preference.value)
+            val locale = closeApp.getLocale(preference.value)
             preference.summary =
                 if (!TextUtils.isEmpty(locale.script)) locale.getDisplayScript(userLocale) else locale.getDisplayName(userLocale)
         }
     }
 
-    private fun updateLocale(locale: Locale) {
-        val config = resources.configuration
-        config.setLocale(locale)
-        LocaleDelegate.defaultLocale = locale
-        requireContext().createConfigurationContext(config)
+    private fun updateLocale(languageTag: String) {
+        closeApp.applyLocale(languageTag)
         requireActivity().recreate()
     }
 

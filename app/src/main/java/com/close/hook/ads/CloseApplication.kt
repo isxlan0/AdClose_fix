@@ -6,6 +6,7 @@ import com.close.hook.ads.preference.PrefManager
 import com.close.hook.ads.preference.PrefManager.darkTheme
 import com.close.hook.ads.manager.ServiceManager
 import com.close.hook.ads.rule.RuleSnapshotBuilder
+import com.close.hook.ads.util.LocaleUtils
 import com.microsoft.appcenter.AppCenter
 import com.microsoft.appcenter.analytics.Analytics
 import com.microsoft.appcenter.crashes.Crashes
@@ -45,10 +46,12 @@ class CloseApplication : Application() {
         )
     }
 
-    private fun applyLocale(languageTag: String) {
-        LocaleDelegate.defaultLocale = getLocale(languageTag)
+    fun applyLocale(languageTag: String) {
+        val locale = getLocale(languageTag)
+        Locale.setDefault(locale)
+        LocaleDelegate.defaultLocale = locale
         val config = resources.configuration
-        config.setLocale(LocaleDelegate.defaultLocale)
+        config.setLocale(locale)
         createConfigurationContext(config)
     }
 
@@ -56,7 +59,7 @@ class CloseApplication : Application() {
         return if (tag == "SYSTEM") {
             LocaleDelegate.systemLocale
         } else {
-            Locale.forLanguageTag(tag)
+            Locale.forLanguageTag(LocaleUtils.normalizeLanguageTag(tag))
         }
     }
 }
