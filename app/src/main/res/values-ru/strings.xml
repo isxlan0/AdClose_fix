@@ -1,0 +1,314 @@
+<resources>
+    <string name="app_name">AdClose</string>
+    <string name="app_description">Блокирует SDK-рекламу и перехватывает сетевые запросы. Бесплатно, только в образовательных целях.</string>
+
+    <string name="error_title">Произошла непредвиденная ошибка.\nИзвините за неудобства.</string>
+
+    <string name="bottom_item_1">Приложения</string>
+    <string name="bottom_item_2">Запросы</string>
+    <string name="bottom_item_3">Настройки</string>
+    <string name="bottom_item_4">Блок</string>
+    <string name="bottom_item_5">Главная</string>
+
+    <string name="advanced_settings">Расширенные настройки</string>
+    <string name="dex_dump_title">DEX Dump</string>
+    <string name="dex_dump_summary">Выполнить DEX Dump для всех перехватываемых приложений \nКаталог хранения: Download/DexKitDump</string>
+    <string name="request_cache_expiration_title">Срок хранения кэша запросов</string>
+    <string name="request_cache_expiration_summary">Установите срок хранения временных данных тела запроса/ответа \nТекущее значение: %s</string>
+
+    <string name="data_manager">Управление данными</string>
+    <string name="data_manager_summary">Управление файлами модуля и настройками</string>
+    <string name="delete_file_title">Удалить файл?</string>
+    <string name="delete_prefs_title">Удалить группу настроек?</string>
+    <string name="delete_file_message">Вы уверены, что хотите навсегда удалить файл \"%1$s\"?</string>
+    <string name="delete_prefs_message">Вы уверены, что хотите навсегда удалить все настройки в группе \"%1$s\"? Это действие нельзя отменить.</string>
+    <string name="delete_db_title">Удалить базу данных?</string>
+    <string name="delete_db_message">Вы уверены, что хотите удалить базу данных \"%1$s\"? Это действие нельзя отменить.</string>
+    <string name="action_delete">Удалить</string>
+
+    <string name="remove_scope_dialog_title">Удалить из области действия?</string>
+    <string name="action_remove">Удалить</string>
+    <string name="disable_scope_dialog_message">Вы уверены, что хотите отключить модуль для %s?</string>
+    <string name="remove_scope_dialog_message">Все переключатели для %s выключены. Удалить это приложение из области действия модуля полностью?</string>
+
+    <string name="search_hint">Поиск</string>
+    <string name="search_hint_with_count">Поиск по %1$d приложениям</string>
+
+    <string name="sort_filter">Сортировка и фильтр</string>
+    <string name="reset">сброс</string>
+    <string name="sort_by">Сортировать по</string>
+    <string name="reverse">В обратном порядке</string>
+    <string name="filter">Фильтр</string>
+
+    <string name="tab_user_apps">Пользовательские приложения</string>
+    <string name="tab_configured_apps">Настроенные приложения</string>
+    <string name="tab_system_apps">Системные приложения</string>
+
+    <string name="tab_request_list">Список запросов</string>
+    <string name="tab_block_list">Список блокировок</string>
+    <string name="tab_pass_list">Список разрешений</string>
+    <string name="original_rules">Исходные правила</string>
+    <string name="cloud_rules">Облачные правила</string>
+
+    <string name="export">Экспорт</string>
+    <string name="restore">Импорт</string>
+
+    <string name="update_checkbox_status">Сохранить</string>
+    <string name="description_two">Включите, чтобы управлять блокировкой веб-рекламных запросов на странице запросов</string>
+    <string name="description_six">Только для общего обнаружения Root и виртуальных машин</string>
+    <string name="handle_platform_ad">Остановить инициализацию рекламы платформы</string>
+    <string name="check_request">Проверка запросов приложения</string>
+    <string name="native_request_hook">Применить проверку нативных запросов</string>
+    <string name="description_nine">Захватывает часть сетевых запросов нативного слоя, что относительно нестабильно.</string>
+
+    <string name="remove_flag_secure">Удалить Flag Secure</string>
+    <string name="remove_vpn_state">Отключить обнаружение VPN и системного прокси</string>
+    <string name="remove_sensor_monitor">Отключить регистрацию датчика ускорения</string>
+    <string name="remove_envi_detection">Отключить обнаружение окружения</string>
+    <string name="remove_clipboard">Отключить чтение и запись буфера обмена</string>
+    <string name="hook_tip_enable">Включить подсказки Hook</string>
+
+    <string name="settings_theme">Тема</string>
+    <string name="settings_system_theme_color_summary">Цвет темы из системы</string>
+    <string name="settings_system_theme_color">Системный цвет темы</string>
+    <string name="settings_theme_color">Цвет темы</string>
+    <string name="dark_theme">Тёмная тема</string>
+    <string name="settings_pure_black_dark_theme">Чёрная тёмная тема</string>
+    <string name="settings_pure_black_dark_theme_summary">Использовать полностью чёрную тему, если включена тёмная тема</string>
+    <string name="dark_theme_off">Всегда выключено</string>
+    <string name="dark_theme_on">Всегда включено</string>
+    <string name="follow_system">Как в системе</string>
+    <string name="dark_theme_follow_system">@string/follow_system</string>
+
+    <!-- Colors -->
+    <string name="color_default">По умолчанию</string>
+    <string name="color_sakura">Сакура</string>
+    <string name="color_red">Красный</string>
+    <string name="color_pink">Розовый</string>
+    <string name="color_purple">Фиолетовый</string>
+    <string name="color_deep_purple">Тёмно-фиолетовый</string>
+    <string name="color_indigo">Индиго</string>
+    <string name="color_blue">Синий</string>
+    <string name="color_light_blue">Голубой</string>
+    <string name="color_cyan">Циан</string>
+    <string name="color_teal">Бирюзовый</string>
+    <string name="color_green">Зелёный</string>
+    <string name="color_light_green">Светло-зелёный</string>
+    <string name="color_lime">Лайм</string>
+    <string name="color_yellow">Жёлтый</string>
+    <string name="color_amber">Янтарный</string>
+    <string name="color_orange">Оранжевый</string>
+    <string name="color_deep_orange">Тёмно-оранжевый</string>
+    <string name="color_brown">Коричневый</string>
+    <string name="color_blue_grey">Сине-серый</string>
+
+    <string name="none">Нет</string>
+    <string name="hint_search_hooks">Поиск конфигураций Hook</string>
+
+    <string name="title_custom_hook">Пользовательский Hook</string>
+    <string name="global_title_custom_hook">Глобальный пользовательский Hook</string>
+    <string name="hook_configs">Конфигурации Hook</string>
+    <string name="title_global_hook_configs">Глобальные конфигурации Hook</string>
+
+    <string name="app_version_format">%1$s (%2$d)</string>
+    <string name="selected_items_count">Выбрано элементов: %d</string>
+    <string name="delete_selected_hooks_title">Удалить выбранные Hooks?</string>
+    <string name="delete_selected_hooks_message">Вы уверены, что хотите удалить все выбранные конфигурации Hook?</string>
+    <string name="deleted_hooks_count">Удалено Hooks: %d</string>
+    <string name="hook_configurations_label">Конфигурации Hook</string>
+    <string name="copied_hooks_count">Скопировано Hooks: %d</string>
+    <string name="clear_all_hooks_title">Очистить все Hooks?</string>
+    <string name="clear_all_hooks_message">Вы уверены, что хотите очистить все конфигурации Hook? Это действие нельзя отменить.</string>
+    <string name="all_hooks_cleared">Все Hooks очищены</string>
+    <string name="empty_hook_configs">Пользовательских конфигураций Hook пока нет</string>
+    <string name="hook_added_successfully">Hook успешно добавлен</string>
+    <string name="hook_updated_successfully">Hook успешно обновлён</string>
+    <string name="delete_hook_title">Удалить Hook?</string>
+    <string name="delete_hook_message">Вы уверены, что хотите удалить эту конфигурацию Hook?</string>
+    <string name="hook_deleted_successfully">Hook успешно удалён</string>
+    <string name="select_valid_hook_method">Выберите корректный метод Hook</string>
+
+    <string name="add_hook_config_title">Добавить конфигурацию Hook</string>
+    <string name="edit_hook_config_title">Изменить конфигурацию Hook</string>
+
+    <string name="hook_method_type_format">Метод Hook: %1$s</string>
+    <string name="class_name_format">Имя класса: %1$s</string>
+    <string name="method_names_format">Имена методов: %1$s</string>
+    <string name="parameter_types_format">Типы параметров: %1$s</string>
+    <string name="return_value_format">Возвращаемое значение: %1$s</string>
+    <string name="field_name_format">Имя поля: %1$s</string>
+    <string name="field_value_format">Значение поля: %1$s</string>
+    <string name="search_strings_format">Строки поиска: %1$s</string>
+
+    <string name="hint_hook_method_type">Тип метода Hook</string>
+    <string name="hint_class_name">Имя класса</string>
+    <string name="hint_method_names">Имена методов (через запятую)</string>
+    <string name="hint_parameter_types">Типы параметров (полное имя класса или примитив, через запятую)</string>
+    <string name="hint_return_value">Возвращаемое значение (true/false/null/number/string)</string>
+    <string name="hint_field_name">Имя поля</string>
+    <string name="hint_field_value">Значение поля (true/false/null/number/string)</string>
+    <string name="hint_search_strings">Строки поиска (через запятую)</string>
+
+    <string name="parameter_replacements_format">Замены параметров: %s</string>
+    <string name="parameter_replacements_label">Замены значений параметров</string>
+    <string name="hint_replace_with_value">Заменить этим значением</string>
+
+    <string name="hook_point_after">После выполнения метода</string>
+    <string name="hook_point_before">До выполнения метода</string>
+
+    <string name="auto_detect_from_clipboard">Автоопределение из буфера обмена</string>
+    <string name="clipboard_content_unrecognized">Формат содержимого буфера обмена не распознан</string>
+
+    <string name="hint_hook_point">Точка Hook</string>
+    <string-array name="hook_points_array">
+        <item>После выполнения метода (after)</item>
+        <item>До выполнения метода (before)</item>
+    </string-array>
+    <string name="hook_point_format">Точка Hook: %1$s</string>
+
+    <string name="error_class_name_empty">Имя класса не может быть пустым</string>
+    <string name="error_method_name_empty">Имя метода не может быть пустым</string>
+    <string name="error_parameter_types_empty">Типы параметров не могут быть пустыми</string>
+    <string name="error_field_name_empty">Имя поля не может быть пустым</string>
+    <string name="error_search_strings_empty">Строки поиска не могут быть пустыми</string>
+
+    <string name="enabled">Включено</string>
+    <string name="disabled">Отключено</string>
+    <string name="enabled_format">Статус: %s</string>
+    <string name="add_hook">Добавить Hook</string>
+    <string name="clear_all_hooks">Очистить все Hooks</string>
+
+    <string name="fab_auto_detect_ads">Автоопределение рекламных SDK</string>
+    <string name="dialog_auto_detect_ads_title">Найденные методы инициализации рекламы</string>
+    <string name="import_selected_hooks_count">Импортировано правил Hook: %d.</string>
+    <string name="no_hook_selected">Не выбрана ни одна конфигурация Hook</string>
+
+    <string name="import_global_rules_title">Импортировать глобальные правила?</string>
+    <string name="import_global_rules_message">Эта конфигурация относится к глобальным правилам Hook. Продолжить импорт?</string>
+    <string name="import_to_global">Импорт</string>
+    <string name="imported_to_global_successfully">Глобальные правила Hook успешно импортированы.</string>
+    <string name="imported_global_rules_app_specific_skipped">Глобальные правила Hook импортированы. Пропущено правил для приложений: %d, так как это глобальная страница.</string>
+    <string name="no_new_hooks_to_import">Нет правил Hook приложения для импорта.</string>
+    <string name="error_empty_or_invalid_json">JSON-файл пуст или имеет неверный формат.</string>
+    <string name="no_new_hooks_to_import_global">Нет глобальных правил Hook для импорта.</string>
+    <string name="no_global_hooks_found_to_import">В конфигурации не найдено глобальных правил Hook для импорта.</string>
+
+    <string name="others">Другое</string>
+    <string name="about">О приложении</string>
+    <string name="feedback">Обратная связь</string>
+    <string name="cache_clean">Очистка кэша</string>
+    <string name="select_all">Выбрать всё</string>
+    <string name="hide_icon">Скрыть значок</string>
+    <string name="filter_disabled">Отключено</string>
+    <string name="sort_by_default">Метод сортировки по умолчанию изменён на</string>
+    <string name="about_view_source_code"><![CDATA[Посмотреть исходный код: %1$s]]></string>
+    <string name="about_source_based_on"><![CDATA[Текущий исходный код основан на репозитории %1$s с дополнительными изменениями]]></string>
+    <string name="about_original_repo_notice"><![CDATA[Это модуль Xposed.<br/><br/>Он основан на оригинальном репозитории %1$s и может быть не полностью работоспособным.]]></string>
+    <string name="block">блокировать</string>
+    <string name="copy">скопировать в буфер обмена</string>
+    <string name="clearAll">очистить всё</string>
+    <string name="block_list">Список блокировок</string>
+    <string name="edit">изменить</string>
+    <string name="settings_language">Язык</string>
+    <string name="delete">Удалить</string>
+    <string name="add">добавить</string>
+    <string name="info">Информация</string>
+    <string name="lsp_api_version">Версия LSP API</string>
+    <string name="android_version">Версия Android</string>
+    <string name="sdk_level">Уровень SDK</string>
+    <string name="android_id">Android ID</string>
+    <string name="brand">Бренд</string>
+    <string name="model">Модель</string>
+    <string name="sku">SKU</string>
+    <string name="build_type">Тип сборки</string>
+    <string name="finger_print">Отпечаток</string>
+    <string name="support">Поддержка</string>
+    <string name="join_telegram_channel"><![CDATA[Присоединиться к каналу %1$s]]></string>
+    <string name="default_page">Страница по умолчанию</string>
+    <string name="activated">Активировано</string>
+    <string name="connecting_service">Подключение к фреймворку</string>
+    <string name="not_activated">Не активировано</string>
+    <string name="version_format">Версия: %1$s(%2$d)</string>
+    <string name="export_empty_request_list">Список запросов пуст и не может быть экспортирован</string>
+    <string name="export_failed">Ошибка экспорта</string>
+    <string name="export_no_app_found">Не удалось экспортировать файл: не найдено подходящее приложение для его создания</string>
+    <string name="add_to_blocklist_success">Пакетно добавлено в чёрный список</string>
+    <string name="import_success">Импорт выполнен успешно</string>
+    <string name="import_failed">Ошибка импорта</string>
+    <string name="export_success">Экспорт выполнен успешно</string>
+    <string name="crash_log">Журнал сбоев</string>
+    <string name="import_success_count">Успешно импортировано новых правил: %1$d.</string>
+    <string name="import_no_new_rules">Импорт выполнен успешно. Новых правил для добавления не найдено.</string>
+    <string name="clear_block_list_confirm">Вы уверены, что хотите очистить весь чёрный список? </string>
+    <string name="batch_remove_success">Пакетно удалено из чёрного списка</string>
+    <string name="batch_copy_to_clipboard">Пакетно скопировано в буфер обмена</string>
+    <string name="add_rule">Добавить правило</string>
+    <string name="edit_rule">Изменить правило</string>
+    <string name="value_empty_error">Значение не может быть пустым</string>
+    <string name="invalid_rule_format">Недопустимый формат правила</string>
+    <string name="rule_exists">Правило уже существует</string>
+    <string name="block_rules_empty">Ручных правил пока нет</string>
+    <string name="cloud_rule_empty">Источников облачных правил пока нет</string>
+    <string name="cloud_rule_add_source">Добавить источник</string>
+    <string name="cloud_rule_edit_source">Изменить источник</string>
+    <string name="cloud_rule_source_url">URL источника</string>
+    <string name="cloud_rule_parse_type">Тип разбора</string>
+    <string name="cloud_rule_parse_as_value">Разбирать как: %1$s</string>
+    <string name="cloud_rule_parse_domain">Домен</string>
+    <string name="cloud_rule_parse_url">URL</string>
+    <string name="cloud_rule_parse_keyword">Ключевое слово</string>
+    <string name="cloud_rule_enabled">Включено</string>
+    <string name="cloud_rule_auto_update">Автообновление</string>
+    <string name="cloud_rule_update_interval_hours">Интервал обновления (часы)</string>
+    <string name="cloud_rule_update_interval_helper">Минимум 1 час. По умолчанию 24 часа.</string>
+    <string name="cloud_rule_update_interval_value">Интервал: %1$d ч</string>
+    <string name="cloud_rule_counts">Всего %1$d · Доменов %2$d · URL %3$d · Ключевых слов %4$d</string>
+    <string name="cloud_rule_last_check">Последняя проверка: %1$s</string>
+    <string name="cloud_rule_last_success">Последний успех: %1$s</string>
+    <string name="cloud_rule_last_error">Последняя ошибка: %1$s</string>
+    <string name="cloud_rule_never">Никогда</string>
+    <string name="cloud_rule_update_now">Обновить сейчас</string>
+    <string name="cloud_rule_delete_source_title">Удалить источник?</string>
+    <string name="cloud_rule_delete_source_message">Вы уверены, что хотите удалить этот источник?\n%1$s</string>
+    <string name="cloud_rule_source_added">Облачный источник добавлен</string>
+    <string name="cloud_rule_source_updated">Облачный источник обновлён</string>
+    <string name="cloud_rule_source_deleted">Облачный источник удалён</string>
+    <string name="cloud_rule_sync_success">Облачные правила обновлены</string>
+    <string name="cloud_rule_invalid_url">Введите корректный URL HTTP или HTTPS</string>
+    <string name="cloud_rule_invalid_parse_type">Выберите корректный тип разбора</string>
+    <string name="cloud_rule_invalid_interval">Введите интервал не менее 1 часа</string>
+    <string name="cloud_rule_duplicate_source">Этот облачный источник уже существует</string>
+    <string name="cloud_rule_no_valid_rules">В этом источнике не найдено корректных правил</string>
+    <string name="cloud_rule_source_not_found">Облачный источник не найден</string>
+    <string name="cloud_rule_sync_failed_with_reason">Ошибка обновления облачных правил: %1$s</string>
+    <string name="open_app_details_failed">Не удалось открыть сведения о приложении</string>
+    <string name="launch_app_failed">Не удалось открыть</string>
+    <string name="module_not_activated">Модуль не активирован</string>
+    <string name="save_success">Успешно сохранено</string>
+    <string name="apk_package_name">Имя пакета APK</string>
+    <string name="apk_size">Размер APK</string>
+    <string name="version_name">Имя версии</string>
+    <string name="version_code">Номер версии</string>
+    <string name="target_sdk">TargetSDK</string>
+    <string name="min_sdk">MinSDK</string>
+    <string name="install_time">Время установки</string>
+    <string name="update_time">Время обновления</string>
+    <string name="sort_by_app_name">Название приложения</string>
+    <string name="sort_by_app_size">Размер приложения</string>
+    <string name="sort_by_last_update">Время последнего обновления</string>
+    <string name="sort_by_install_date">Дата установки</string>
+    <string name="sort_by_target_version">Целевая версия</string>
+    <string name="filter_configured">Настроено</string>
+    <string name="filter_recent_update">Недавнее обновление</string>
+    <string name="updated">Обновлено</string>
+    <string name="open">Открыть</string>
+    <string name="details">Сведения</string>
+    <string name="remove_from_blocklist">Удалить из чёрного списка</string>
+    <string name="add_to_blocklist">Добавить в чёрный список</string>
+    <string name="copied_to_clipboard_single">Скопировано: %1$s</string>
+    <string name="copied_to_clipboard_batch">Пакетно скопировано в буфер обмена</string>
+    <string name="confirm_clear_cache_title">Вы уверены, что хотите очистить кэш? </string>
+    <string name="confirm_clear_cache_message">Текущий кэш %1$s</string>
+    <string name="cache_cleared_recently">Только что очищено</string>
+    <string name="invalid_file_format">Недопустимый формат файла, выберите файл с расширением .rule</string>
+</resources>

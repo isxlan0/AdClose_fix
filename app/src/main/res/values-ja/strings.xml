@@ -1,0 +1,314 @@
+<resources>
+    <string name="app_name">AdClose</string>
+    <string name="app_description">SDK 広告をブロックし、ネットワークリクエストを傍受します。無料で、教育目的のみを対象としています。</string>
+
+    <string name="error_title">予期しないエラーが発生しました。\nご不便をおかけして申し訳ありません。</string>
+
+    <string name="bottom_item_1">アプリ</string>
+    <string name="bottom_item_2">リクエスト</string>
+    <string name="bottom_item_3">設定</string>
+    <string name="bottom_item_4">ブロック</string>
+    <string name="bottom_item_5">ホーム</string>
+
+    <string name="advanced_settings">詳細設定</string>
+    <string name="dex_dump_title">DEX ダンプ</string>
+    <string name="dex_dump_summary">フック対象のすべてのアプリで DEX ダンプを実行します \n保存先: Download/DexKitDump</string>
+    <string name="request_cache_expiration_title">リクエストキャッシュの有効期限</string>
+    <string name="request_cache_expiration_summary">一時的なリクエスト/レスポンス本文データの有効期限を設定します \n現在: %s</string>
+
+    <string name="data_manager">データ管理</string>
+    <string name="data_manager_summary">モジュールのファイルと設定を管理します</string>
+    <string name="delete_file_title">ファイルを削除しますか？</string>
+    <string name="delete_prefs_title">設定グループを削除しますか？</string>
+    <string name="delete_file_message">ファイル \"%1$s\" を完全に削除してもよろしいですか？</string>
+    <string name="delete_prefs_message">グループ \"%1$s\" 内のすべての設定を完全に削除してもよろしいですか？ この操作は元に戻せません。</string>
+    <string name="delete_db_title">データベースを削除しますか？</string>
+    <string name="delete_db_message">データベース \"%1$s\" を削除してもよろしいですか？ この操作は元に戻せません。</string>
+    <string name="action_delete">削除</string>
+
+    <string name="remove_scope_dialog_title">対象範囲から削除しますか？</string>
+    <string name="action_remove">削除</string>
+    <string name="disable_scope_dialog_message">%s のモジュールを無効にしてもよろしいですか？</string>
+    <string name="remove_scope_dialog_message">%s のすべてのスイッチがオフになっています。このアプリをモジュールの対象範囲から完全に削除しますか？</string>
+
+    <string name="search_hint">検索</string>
+    <string name="search_hint_with_count">%1$d 個のアプリを検索</string>
+
+    <string name="sort_filter">並べ替えとフィルター</string>
+    <string name="reset">リセット</string>
+    <string name="sort_by">並べ替え</string>
+    <string name="reverse">逆順</string>
+    <string name="filter">フィルター</string>
+
+    <string name="tab_user_apps">ユーザーアプリ</string>
+    <string name="tab_configured_apps">設定済みアプリ</string>
+    <string name="tab_system_apps">システムアプリ</string>
+
+    <string name="tab_request_list">リクエスト一覧</string>
+    <string name="tab_block_list">ブロック一覧</string>
+    <string name="tab_pass_list">許可一覧</string>
+    <string name="original_rules">元のルール</string>
+    <string name="cloud_rules">クラウドルール</string>
+
+    <string name="export">エクスポート</string>
+    <string name="restore">インポート</string>
+
+    <string name="update_checkbox_status">保存</string>
+    <string name="description_two">有効にすると、リクエストページで Web 広告リクエストのブロックを管理できます</string>
+    <string name="description_six">一般的な Root 検出と仮想マシン検出にのみ対応します</string>
+    <string name="handle_platform_ad">プラットフォーム広告の初期化を停止</string>
+    <string name="check_request">アプリのリクエスト確認</string>
+    <string name="native_request_hook">ネイティブのリクエスト確認を適用</string>
+    <string name="description_nine">ネイティブ層の一部ネットワークリクエストをキャプチャしますが、比較的不安定です。</string>
+
+    <string name="remove_flag_secure">Flag Secure を解除</string>
+    <string name="remove_vpn_state">VPN とシステムプロキシの検出を解除</string>
+    <string name="remove_sensor_monitor">加速度センサーの登録を解除</string>
+    <string name="remove_envi_detection">環境検出を解除</string>
+    <string name="remove_clipboard">クリップボードの読み書きを解除</string>
+    <string name="hook_tip_enable">Hook ヒントを有効化</string>
+
+    <string name="settings_theme">テーマ</string>
+    <string name="settings_system_theme_color_summary">システムからテーマカラーを取得</string>
+    <string name="settings_system_theme_color">システムテーマカラー</string>
+    <string name="settings_theme_color">テーマカラー</string>
+    <string name="dark_theme">ダークテーマ</string>
+    <string name="settings_pure_black_dark_theme">ピュアブラックのダークテーマ</string>
+    <string name="settings_pure_black_dark_theme_summary">ダークテーマ有効時に純黒テーマを使用します</string>
+    <string name="dark_theme_off">常にオフ</string>
+    <string name="dark_theme_on">常にオン</string>
+    <string name="follow_system">システムに従う</string>
+    <string name="dark_theme_follow_system">@string/follow_system</string>
+
+    <!-- Colors -->
+    <string name="color_default">デフォルト</string>
+    <string name="color_sakura">桜</string>
+    <string name="color_red">赤</string>
+    <string name="color_pink">ピンク</string>
+    <string name="color_purple">紫</string>
+    <string name="color_deep_purple">濃い紫</string>
+    <string name="color_indigo">インディゴ</string>
+    <string name="color_blue">青</string>
+    <string name="color_light_blue">水色</string>
+    <string name="color_cyan">シアン</string>
+    <string name="color_teal">ティール</string>
+    <string name="color_green">緑</string>
+    <string name="color_light_green">黄緑</string>
+    <string name="color_lime">ライム</string>
+    <string name="color_yellow">黄色</string>
+    <string name="color_amber">アンバー</string>
+    <string name="color_orange">オレンジ</string>
+    <string name="color_deep_orange">濃いオレンジ</string>
+    <string name="color_brown">茶色</string>
+    <string name="color_blue_grey">ブルーグレー</string>
+
+    <string name="none">なし</string>
+    <string name="hint_search_hooks">Hook 設定を検索</string>
+
+    <string name="title_custom_hook">カスタム Hook</string>
+    <string name="global_title_custom_hook">グローバルカスタム Hook</string>
+    <string name="hook_configs">Hook 設定</string>
+    <string name="title_global_hook_configs">グローバル Hook 設定</string>
+
+    <string name="app_version_format">%1$s (%2$d)</string>
+    <string name="selected_items_count">%d 件を選択中</string>
+    <string name="delete_selected_hooks_title">選択した Hook を削除しますか？</string>
+    <string name="delete_selected_hooks_message">選択した Hook 設定をすべて削除してもよろしいですか？</string>
+    <string name="deleted_hooks_count">%d 件の Hook を削除しました</string>
+    <string name="hook_configurations_label">Hook 設定</string>
+    <string name="copied_hooks_count">%d 件の Hook をコピーしました</string>
+    <string name="clear_all_hooks_title">すべての Hook をクリアしますか？</string>
+    <string name="clear_all_hooks_message">すべての Hook 設定をクリアしてもよろしいですか？ この操作は元に戻せません。</string>
+    <string name="all_hooks_cleared">すべての Hook をクリアしました</string>
+    <string name="empty_hook_configs">カスタム Hook 設定はまだありません</string>
+    <string name="hook_added_successfully">Hook を追加しました</string>
+    <string name="hook_updated_successfully">Hook を更新しました</string>
+    <string name="delete_hook_title">Hook を削除しますか？</string>
+    <string name="delete_hook_message">この Hook 設定を削除してもよろしいですか？</string>
+    <string name="hook_deleted_successfully">Hook を削除しました</string>
+    <string name="select_valid_hook_method">有効な Hook メソッドを選択してください</string>
+
+    <string name="add_hook_config_title">Hook 設定を追加</string>
+    <string name="edit_hook_config_title">Hook 設定を編集</string>
+
+    <string name="hook_method_type_format">Hook メソッド: %1$s</string>
+    <string name="class_name_format">クラス名: %1$s</string>
+    <string name="method_names_format">メソッド名: %1$s</string>
+    <string name="parameter_types_format">パラメータ型: %1$s</string>
+    <string name="return_value_format">戻り値: %1$s</string>
+    <string name="field_name_format">フィールド名: %1$s</string>
+    <string name="field_value_format">フィールド値: %1$s</string>
+    <string name="search_strings_format">検索文字列: %1$s</string>
+
+    <string name="hint_hook_method_type">Hook メソッドの種類</string>
+    <string name="hint_class_name">クラス名</string>
+    <string name="hint_method_names">メソッド名（カンマ区切り）</string>
+    <string name="hint_parameter_types">パラメータ型（完全修飾クラス名またはプリミティブ、カンマ区切り）</string>
+    <string name="hint_return_value">戻り値（true/false/null/number/string）</string>
+    <string name="hint_field_name">フィールド名</string>
+    <string name="hint_field_value">フィールド値（true/false/null/number/string）</string>
+    <string name="hint_search_strings">検索文字列（カンマ区切り）</string>
+
+    <string name="parameter_replacements_format">パラメータ置換: %s</string>
+    <string name="parameter_replacements_label">パラメータ値の置換</string>
+    <string name="hint_replace_with_value">この値に置換</string>
+
+    <string name="hook_point_after">メソッド実行後</string>
+    <string name="hook_point_before">メソッド実行前</string>
+
+    <string name="auto_detect_from_clipboard">クリップボードから自動検出</string>
+    <string name="clipboard_content_unrecognized">クリップボードの内容形式を認識できません</string>
+
+    <string name="hint_hook_point">Hook ポイント</string>
+    <string-array name="hook_points_array">
+        <item>メソッド実行後 (after)</item>
+        <item>メソッド実行前 (before)</item>
+    </string-array>
+    <string name="hook_point_format">Hook ポイント: %1$s</string>
+
+    <string name="error_class_name_empty">クラス名は空にできません</string>
+    <string name="error_method_name_empty">メソッド名は空にできません</string>
+    <string name="error_parameter_types_empty">パラメータ型は空にできません</string>
+    <string name="error_field_name_empty">フィールド名は空にできません</string>
+    <string name="error_search_strings_empty">検索文字列は空にできません</string>
+
+    <string name="enabled">有効</string>
+    <string name="disabled">無効</string>
+    <string name="enabled_format">有効状態: %s</string>
+    <string name="add_hook">Hook を追加</string>
+    <string name="clear_all_hooks">すべての Hook をクリア</string>
+
+    <string name="fab_auto_detect_ads">広告 SDK を自動検出</string>
+    <string name="dialog_auto_detect_ads_title">検出された広告初期化メソッド</string>
+    <string name="import_selected_hooks_count">%d 件の Hook ルールをインポートしました。</string>
+    <string name="no_hook_selected">Hook 設定が選択されていません</string>
+
+    <string name="import_global_rules_title">グローバルルールをインポートしますか？</string>
+    <string name="import_global_rules_message">この設定はグローバル Hook ルールに属しています。インポートを続行しますか？</string>
+    <string name="import_to_global">インポート</string>
+    <string name="imported_to_global_successfully">グローバル Hook ルールをインポートしました。</string>
+    <string name="imported_global_rules_app_specific_skipped">グローバル Hook ルールをインポートしました。このページはグローバル用のため、アプリ固有ルール %d 件をスキップしました。</string>
+    <string name="no_new_hooks_to_import">インポートするアプリ Hook ルールがありません。</string>
+    <string name="error_empty_or_invalid_json">JSON ファイルが空か、形式が無効です。</string>
+    <string name="no_new_hooks_to_import_global">インポートするグローバル Hook ルールがありません。</string>
+    <string name="no_global_hooks_found_to_import">設定内にインポート可能なグローバル Hook ルールが見つかりません。</string>
+
+    <string name="others">その他</string>
+    <string name="about">情報</string>
+    <string name="feedback">フィードバック</string>
+    <string name="cache_clean">キャッシュをクリア</string>
+    <string name="select_all">すべて選択</string>
+    <string name="hide_icon">アイコンを非表示</string>
+    <string name="filter_disabled">無効</string>
+    <string name="sort_by_default">デフォルトの並べ替え方法が次に変更されました</string>
+    <string name="about_view_source_code"><![CDATA[%1$s でソースコードを見る]]></string>
+    <string name="about_source_based_on"><![CDATA[現在のソースは %1$s リポジトリをベースに、さらに変更が加えられています]]></string>
+    <string name="about_original_repo_notice"><![CDATA[これは Xposed モジュールです。<br/><br/>元のリポジトリ %1$s をベースにしており、完全には利用できない可能性があります。]]></string>
+    <string name="block">ブロック</string>
+    <string name="copy">クリップボードにコピー</string>
+    <string name="clearAll">すべてクリア</string>
+    <string name="block_list">ブロック一覧</string>
+    <string name="edit">編集</string>
+    <string name="settings_language">言語</string>
+    <string name="delete">削除</string>
+    <string name="add">追加</string>
+    <string name="info">情報</string>
+    <string name="lsp_api_version">LSP API バージョン</string>
+    <string name="android_version">Android バージョン</string>
+    <string name="sdk_level">SDK レベル</string>
+    <string name="android_id">Android ID</string>
+    <string name="brand">ブランド</string>
+    <string name="model">モデル</string>
+    <string name="sku">SKU</string>
+    <string name="build_type">ビルドタイプ</string>
+    <string name="finger_print">フィンガープリント</string>
+    <string name="support">サポート</string>
+    <string name="join_telegram_channel"><![CDATA[%1$s チャンネルに参加]]></string>
+    <string name="default_page">既定のページ</string>
+    <string name="activated">有効化済み</string>
+    <string name="connecting_service">フレームワークに接続中</string>
+    <string name="not_activated">有効化されていません</string>
+    <string name="version_format">バージョン: %1$s(%2$d)</string>
+    <string name="export_empty_request_list">リクエスト一覧が空のためエクスポートできません</string>
+    <string name="export_failed">エクスポートに失敗しました</string>
+    <string name="export_no_app_found">ファイルを作成できる適切なアプリが見つからないため、エクスポートできません</string>
+    <string name="add_to_blocklist_success">ブラックリストに一括追加しました</string>
+    <string name="import_success">インポート成功</string>
+    <string name="import_failed">インポート失敗</string>
+    <string name="export_success">エクスポート成功</string>
+    <string name="crash_log">クラッシュログ</string>
+    <string name="import_success_count">%1$d 件の新しいルールを正常にインポートしました。</string>
+    <string name="import_no_new_rules">インポートに成功しました。追加できる新しいルールは見つかりませんでした。</string>
+    <string name="clear_block_list_confirm">すべてのブラックリストをクリアしてもよろしいですか？ </string>
+    <string name="batch_remove_success">ブラックリストから一括削除しました</string>
+    <string name="batch_copy_to_clipboard">一括でクリップボードにコピーしました</string>
+    <string name="add_rule">ルールを追加</string>
+    <string name="edit_rule">ルールを編集</string>
+    <string name="value_empty_error">値は空にできません</string>
+    <string name="invalid_rule_format">ルール形式が無効です</string>
+    <string name="rule_exists">ルールはすでに存在します</string>
+    <string name="block_rules_empty">手動ルールはまだありません</string>
+    <string name="cloud_rule_empty">クラウドルールソースはまだありません</string>
+    <string name="cloud_rule_add_source">ソースを追加</string>
+    <string name="cloud_rule_edit_source">ソースを編集</string>
+    <string name="cloud_rule_source_url">ソース URL</string>
+    <string name="cloud_rule_parse_type">解析タイプ</string>
+    <string name="cloud_rule_parse_as_value">解析方法: %1$s</string>
+    <string name="cloud_rule_parse_domain">ドメイン</string>
+    <string name="cloud_rule_parse_url">URL</string>
+    <string name="cloud_rule_parse_keyword">キーワード</string>
+    <string name="cloud_rule_enabled">有効</string>
+    <string name="cloud_rule_auto_update">自動更新</string>
+    <string name="cloud_rule_update_interval_hours">更新間隔（時間）</string>
+    <string name="cloud_rule_update_interval_helper">最小 1 時間です。デフォルトは 24 時間です。</string>
+    <string name="cloud_rule_update_interval_value">間隔: %1$d 時間</string>
+    <string name="cloud_rule_counts">合計 %1$d · ドメイン %2$d · URL %3$d · キーワード %4$d</string>
+    <string name="cloud_rule_last_check">最終確認: %1$s</string>
+    <string name="cloud_rule_last_success">最終成功: %1$s</string>
+    <string name="cloud_rule_last_error">最終エラー: %1$s</string>
+    <string name="cloud_rule_never">なし</string>
+    <string name="cloud_rule_update_now">今すぐ更新</string>
+    <string name="cloud_rule_delete_source_title">ソースを削除しますか？</string>
+    <string name="cloud_rule_delete_source_message">このソースを削除してもよろしいですか？\n%1$s</string>
+    <string name="cloud_rule_source_added">クラウドソースを追加しました</string>
+    <string name="cloud_rule_source_updated">クラウドソースを更新しました</string>
+    <string name="cloud_rule_source_deleted">クラウドソースを削除しました</string>
+    <string name="cloud_rule_sync_success">クラウドルールを更新しました</string>
+    <string name="cloud_rule_invalid_url">有効な HTTP または HTTPS URL を入力してください</string>
+    <string name="cloud_rule_invalid_parse_type">有効な解析タイプを選択してください</string>
+    <string name="cloud_rule_invalid_interval">1 時間以上の間隔を入力してください</string>
+    <string name="cloud_rule_duplicate_source">このクラウドソースはすでに存在します</string>
+    <string name="cloud_rule_no_valid_rules">このソースには有効なルールが見つかりませんでした</string>
+    <string name="cloud_rule_source_not_found">クラウドソースが見つかりませんでした</string>
+    <string name="cloud_rule_sync_failed_with_reason">クラウドルールの更新に失敗しました: %1$s</string>
+    <string name="open_app_details_failed">アプリ詳細を開けません</string>
+    <string name="launch_app_failed">起動に失敗しました</string>
+    <string name="module_not_activated">モジュールが有効化されていません</string>
+    <string name="save_success">正常に保存しました</string>
+    <string name="apk_package_name">APK パッケージ名</string>
+    <string name="apk_size">APK サイズ</string>
+    <string name="version_name">バージョン名</string>
+    <string name="version_code">バージョン番号</string>
+    <string name="target_sdk">TargetSDK</string>
+    <string name="min_sdk">MinSDK</string>
+    <string name="install_time">インストール日時</string>
+    <string name="update_time">更新日時</string>
+    <string name="sort_by_app_name">アプリ名</string>
+    <string name="sort_by_app_size">アプリサイズ</string>
+    <string name="sort_by_last_update">最終更新日時</string>
+    <string name="sort_by_install_date">インストール日</string>
+    <string name="sort_by_target_version">対象バージョン</string>
+    <string name="filter_configured">設定済み</string>
+    <string name="filter_recent_update">最近更新</string>
+    <string name="updated">更新済み</string>
+    <string name="open">開く</string>
+    <string name="details">詳細</string>
+    <string name="remove_from_blocklist">ブラックリストから削除</string>
+    <string name="add_to_blocklist">ブラックリストに追加</string>
+    <string name="copied_to_clipboard_single">コピーしました: %1$s</string>
+    <string name="copied_to_clipboard_batch">一括でクリップボードにコピーしました</string>
+    <string name="confirm_clear_cache_title">キャッシュをクリアしてもよろしいですか？ </string>
+    <string name="confirm_clear_cache_message">現在のキャッシュ %1$s</string>
+    <string name="cache_cleared_recently">たった今クリアしました</string>
+    <string name="invalid_file_format">ファイル形式が無効です。.rule で終わるファイルを選択してください</string>
+</resources>

@@ -1,0 +1,314 @@
+<resources>
+    <string name="app_name">AdClose</string>
+    <string name="app_description">SDK 광고를 차단하고 네트워크 요청을 가로챕니다. 무료이며 교육 목적에 한해 제공됩니다.</string>
+
+    <string name="error_title">예기치 않은 오류가 발생했습니다.\n불편을 드려 죄송합니다.</string>
+
+    <string name="bottom_item_1">앱</string>
+    <string name="bottom_item_2">요청</string>
+    <string name="bottom_item_3">설정</string>
+    <string name="bottom_item_4">차단</string>
+    <string name="bottom_item_5">홈</string>
+
+    <string name="advanced_settings">고급 설정</string>
+    <string name="dex_dump_title">DEX 덤프</string>
+    <string name="dex_dump_summary">후킹된 모든 앱에 대해 DEX 덤프를 수행합니다 \n저장 위치: Download/DexKitDump</string>
+    <string name="request_cache_expiration_title">요청 캐시 만료 시간</string>
+    <string name="request_cache_expiration_summary">임시 요청/응답 본문 데이터의 만료 시간을 설정합니다 \n현재: %s</string>
+
+    <string name="data_manager">데이터 관리자</string>
+    <string name="data_manager_summary">모듈 파일과 환경설정을 관리합니다</string>
+    <string name="delete_file_title">파일을 삭제할까요?</string>
+    <string name="delete_prefs_title">환경설정 그룹을 삭제할까요?</string>
+    <string name="delete_file_message">파일 \"%1$s\" 을(를) 영구적으로 삭제하시겠습니까?</string>
+    <string name="delete_prefs_message">그룹 \"%1$s\" 의 모든 환경설정을 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</string>
+    <string name="delete_db_title">데이터베이스를 삭제할까요?</string>
+    <string name="delete_db_message">데이터베이스 \"%1$s\" 을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</string>
+    <string name="action_delete">삭제</string>
+
+    <string name="remove_scope_dialog_title">범위에서 제거할까요?</string>
+    <string name="action_remove">제거</string>
+    <string name="disable_scope_dialog_message">%s 에 대한 모듈을 비활성화하시겠습니까?</string>
+    <string name="remove_scope_dialog_message">%s 의 모든 스위치가 꺼져 있습니다. 이 앱을 모듈 범위에서 완전히 제거하시겠습니까?</string>
+
+    <string name="search_hint">검색</string>
+    <string name="search_hint_with_count">%1$d개 앱 검색</string>
+
+    <string name="sort_filter">정렬 및 필터</string>
+    <string name="reset">재설정</string>
+    <string name="sort_by">정렬 기준</string>
+    <string name="reverse">역순</string>
+    <string name="filter">필터</string>
+
+    <string name="tab_user_apps">사용자 앱</string>
+    <string name="tab_configured_apps">구성된 앱</string>
+    <string name="tab_system_apps">시스템 앱</string>
+
+    <string name="tab_request_list">요청 목록</string>
+    <string name="tab_block_list">차단 목록</string>
+    <string name="tab_pass_list">허용 목록</string>
+    <string name="original_rules">원본 규칙</string>
+    <string name="cloud_rules">클라우드 규칙</string>
+
+    <string name="export">내보내기</string>
+    <string name="restore">가져오기</string>
+
+    <string name="update_checkbox_status">저장</string>
+    <string name="description_two">활성화하면 요청 페이지에서 웹 광고 요청 차단을 관리할 수 있습니다</string>
+    <string name="description_six">일반적인 Root 및 가상 머신 감지에만 적용됩니다</string>
+    <string name="handle_platform_ad">플랫폼 광고 초기화 중지</string>
+    <string name="check_request">앱 요청 검사</string>
+    <string name="native_request_hook">네이티브 요청 검사 적용</string>
+    <string name="description_nine">네이티브 계층의 일부 네트워크 요청을 캡처하지만 비교적 불안정합니다.</string>
+
+    <string name="remove_flag_secure">Flag Secure 제거</string>
+    <string name="remove_vpn_state">VPN 및 시스템 프록시 감지 제거</string>
+    <string name="remove_sensor_monitor">가속도 센서 등록 제거</string>
+    <string name="remove_envi_detection">환경 감지 제거</string>
+    <string name="remove_clipboard">클립보드 읽기 및 쓰기 제거</string>
+    <string name="hook_tip_enable">Hook 팁 활성화</string>
+
+    <string name="settings_theme">테마</string>
+    <string name="settings_system_theme_color_summary">시스템에서 테마 색상 가져오기</string>
+    <string name="settings_system_theme_color">시스템 테마 색상</string>
+    <string name="settings_theme_color">테마 색상</string>
+    <string name="dark_theme">다크 테마</string>
+    <string name="settings_pure_black_dark_theme">순수 검정 다크 테마</string>
+    <string name="settings_pure_black_dark_theme_summary">다크 테마가 활성화되어 있으면 순수 검정 테마를 사용합니다</string>
+    <string name="dark_theme_off">항상 끔</string>
+    <string name="dark_theme_on">항상 켬</string>
+    <string name="follow_system">시스템 설정 따름</string>
+    <string name="dark_theme_follow_system">@string/follow_system</string>
+
+    <!-- Colors -->
+    <string name="color_default">기본값</string>
+    <string name="color_sakura">사쿠라</string>
+    <string name="color_red">빨강</string>
+    <string name="color_pink">분홍</string>
+    <string name="color_purple">보라</string>
+    <string name="color_deep_purple">진한 보라</string>
+    <string name="color_indigo">인디고</string>
+    <string name="color_blue">파랑</string>
+    <string name="color_light_blue">하늘색</string>
+    <string name="color_cyan">시안</string>
+    <string name="color_teal">청록</string>
+    <string name="color_green">초록</string>
+    <string name="color_light_green">연두</string>
+    <string name="color_lime">라임</string>
+    <string name="color_yellow">노랑</string>
+    <string name="color_amber">앰버</string>
+    <string name="color_orange">주황</string>
+    <string name="color_deep_orange">진한 주황</string>
+    <string name="color_brown">갈색</string>
+    <string name="color_blue_grey">블루 그레이</string>
+
+    <string name="none">없음</string>
+    <string name="hint_search_hooks">Hook 구성 검색</string>
+
+    <string name="title_custom_hook">사용자 Hook</string>
+    <string name="global_title_custom_hook">전역 사용자 Hook</string>
+    <string name="hook_configs">Hook 구성</string>
+    <string name="title_global_hook_configs">전역 Hook 구성</string>
+
+    <string name="app_version_format">%1$s (%2$d)</string>
+    <string name="selected_items_count">%d개 항목 선택됨</string>
+    <string name="delete_selected_hooks_title">선택한 Hook 을 삭제할까요?</string>
+    <string name="delete_selected_hooks_message">선택한 모든 Hook 구성을 삭제하시겠습니까?</string>
+    <string name="deleted_hooks_count">%d개의 Hook 이 삭제됨</string>
+    <string name="hook_configurations_label">Hook 구성</string>
+    <string name="copied_hooks_count">%d개의 Hook 이 복사됨</string>
+    <string name="clear_all_hooks_title">모든 Hook 을 지울까요?</string>
+    <string name="clear_all_hooks_message">모든 Hook 구성을 지우시겠습니까? 이 작업은 되돌릴 수 없습니다.</string>
+    <string name="all_hooks_cleared">모든 Hook 이 지워졌습니다</string>
+    <string name="empty_hook_configs">아직 사용자 Hook 구성이 없습니다</string>
+    <string name="hook_added_successfully">Hook 이 성공적으로 추가되었습니다</string>
+    <string name="hook_updated_successfully">Hook 이 성공적으로 업데이트되었습니다</string>
+    <string name="delete_hook_title">Hook 을 삭제할까요?</string>
+    <string name="delete_hook_message">이 Hook 구성을 삭제하시겠습니까?</string>
+    <string name="hook_deleted_successfully">Hook 이 성공적으로 삭제되었습니다</string>
+    <string name="select_valid_hook_method">유효한 Hook 메서드를 선택하세요</string>
+
+    <string name="add_hook_config_title">Hook 구성 추가</string>
+    <string name="edit_hook_config_title">Hook 구성 수정</string>
+
+    <string name="hook_method_type_format">Hook 메서드: %1$s</string>
+    <string name="class_name_format">클래스 이름: %1$s</string>
+    <string name="method_names_format">메서드 이름: %1$s</string>
+    <string name="parameter_types_format">매개변수 형식: %1$s</string>
+    <string name="return_value_format">반환값: %1$s</string>
+    <string name="field_name_format">필드 이름: %1$s</string>
+    <string name="field_value_format">필드 값: %1$s</string>
+    <string name="search_strings_format">검색 문자열: %1$s</string>
+
+    <string name="hint_hook_method_type">Hook 메서드 유형</string>
+    <string name="hint_class_name">클래스 이름</string>
+    <string name="hint_method_names">메서드 이름(쉼표로 구분)</string>
+    <string name="hint_parameter_types">매개변수 형식(전체 클래스 이름 또는 기본형, 쉼표로 구분)</string>
+    <string name="hint_return_value">반환값(true/false/null/number/string)</string>
+    <string name="hint_field_name">필드 이름</string>
+    <string name="hint_field_value">필드 값(true/false/null/number/string)</string>
+    <string name="hint_search_strings">검색 문자열(쉼표로 구분)</string>
+
+    <string name="parameter_replacements_format">매개변수 대체값: %s</string>
+    <string name="parameter_replacements_label">매개변수 값 대체</string>
+    <string name="hint_replace_with_value">이 값으로 대체</string>
+
+    <string name="hook_point_after">메서드 실행 후</string>
+    <string name="hook_point_before">메서드 실행 전</string>
+
+    <string name="auto_detect_from_clipboard">클립보드에서 자동 감지</string>
+    <string name="clipboard_content_unrecognized">클립보드 내용 형식을 인식할 수 없습니다</string>
+
+    <string name="hint_hook_point">Hook 지점</string>
+    <string-array name="hook_points_array">
+        <item>메서드 실행 후 (after)</item>
+        <item>메서드 실행 전 (before)</item>
+    </string-array>
+    <string name="hook_point_format">Hook 지점: %1$s</string>
+
+    <string name="error_class_name_empty">클래스 이름은 비워 둘 수 없습니다</string>
+    <string name="error_method_name_empty">메서드 이름은 비워 둘 수 없습니다</string>
+    <string name="error_parameter_types_empty">매개변수 형식은 비워 둘 수 없습니다</string>
+    <string name="error_field_name_empty">필드 이름은 비워 둘 수 없습니다</string>
+    <string name="error_search_strings_empty">검색 문자열은 비워 둘 수 없습니다</string>
+
+    <string name="enabled">사용</string>
+    <string name="disabled">사용 안 함</string>
+    <string name="enabled_format">활성 상태: %s</string>
+    <string name="add_hook">Hook 추가</string>
+    <string name="clear_all_hooks">모든 Hook 지우기</string>
+
+    <string name="fab_auto_detect_ads">광고 SDK 자동 감지</string>
+    <string name="dialog_auto_detect_ads_title">감지된 광고 초기화 메서드</string>
+    <string name="import_selected_hooks_count">%d개의 Hook 규칙을 가져왔습니다.</string>
+    <string name="no_hook_selected">선택된 Hook 구성이 없습니다</string>
+
+    <string name="import_global_rules_title">전역 규칙을 가져올까요?</string>
+    <string name="import_global_rules_message">이 구성은 전역 Hook 규칙에 속합니다. 계속 가져오시겠습니까?</string>
+    <string name="import_to_global">가져오기</string>
+    <string name="imported_to_global_successfully">전역 Hook 규칙을 성공적으로 가져왔습니다.</string>
+    <string name="imported_global_rules_app_specific_skipped">전역 Hook 규칙을 가져왔습니다. 현재 페이지는 전역 페이지이므로 앱별 규칙 %d개를 건너뛰었습니다.</string>
+    <string name="no_new_hooks_to_import">가져올 애플리케이션 Hook 규칙이 없습니다.</string>
+    <string name="error_empty_or_invalid_json">JSON 파일이 비어 있거나 형식이 올바르지 않습니다.</string>
+    <string name="no_new_hooks_to_import_global">가져올 전역 Hook 규칙이 없습니다.</string>
+    <string name="no_global_hooks_found_to_import">구성에서 가져올 전역 Hook 규칙을 찾을 수 없습니다.</string>
+
+    <string name="others">기타</string>
+    <string name="about">정보</string>
+    <string name="feedback">피드백</string>
+    <string name="cache_clean">캐시 정리</string>
+    <string name="select_all">모두 선택</string>
+    <string name="hide_icon">아이콘 숨기기</string>
+    <string name="filter_disabled">비활성화됨</string>
+    <string name="sort_by_default">기본 정렬 방식이 다음으로 변경되었습니다</string>
+    <string name="about_view_source_code"><![CDATA[%1$s 에서 소스 코드 보기]]></string>
+    <string name="about_source_based_on"><![CDATA[현재 소스는 %1$s 저장소를 기반으로 추가 수정되었습니다]]></string>
+    <string name="about_original_repo_notice"><![CDATA[이것은 Xposed 모듈입니다.<br/><br/>원본 저장소 %1$s 를 기반으로 하며 완전히 사용 가능하지 않을 수 있습니다.]]></string>
+    <string name="block">차단</string>
+    <string name="copy">클립보드에 복사</string>
+    <string name="clearAll">모두 지우기</string>
+    <string name="block_list">차단 목록</string>
+    <string name="edit">수정</string>
+    <string name="settings_language">언어</string>
+    <string name="delete">삭제</string>
+    <string name="add">추가</string>
+    <string name="info">정보</string>
+    <string name="lsp_api_version">LSP API 버전</string>
+    <string name="android_version">Android 버전</string>
+    <string name="sdk_level">SDK 수준</string>
+    <string name="android_id">Android ID</string>
+    <string name="brand">브랜드</string>
+    <string name="model">모델</string>
+    <string name="sku">SKU</string>
+    <string name="build_type">빌드 유형</string>
+    <string name="finger_print">지문</string>
+    <string name="support">지원</string>
+    <string name="join_telegram_channel"><![CDATA[%1$s 채널 참여]]></string>
+    <string name="default_page">기본 페이지</string>
+    <string name="activated">활성화됨</string>
+    <string name="connecting_service">프레임워크에 연결 중</string>
+    <string name="not_activated">활성화되지 않음</string>
+    <string name="version_format">버전: %1$s(%2$d)</string>
+    <string name="export_empty_request_list">요청 목록이 비어 있어 내보낼 수 없습니다</string>
+    <string name="export_failed">내보내기에 실패했습니다</string>
+    <string name="export_no_app_found">파일을 생성할 적절한 애플리케이션을 찾지 못해 내보낼 수 없습니다</string>
+    <string name="add_to_blocklist_success">블랙리스트에 일괄 추가되었습니다</string>
+    <string name="import_success">가져오기 성공</string>
+    <string name="import_failed">가져오기 실패</string>
+    <string name="export_success">내보내기 성공</string>
+    <string name="crash_log">충돌 로그</string>
+    <string name="import_success_count">%1$d개의 새 규칙을 성공적으로 가져왔습니다.</string>
+    <string name="import_no_new_rules">가져오기에 성공했습니다. 추가할 새 규칙이 없습니다.</string>
+    <string name="clear_block_list_confirm">모든 블랙리스트를 지우시겠습니까? </string>
+    <string name="batch_remove_success">블랙리스트에서 일괄 제거되었습니다</string>
+    <string name="batch_copy_to_clipboard">클립보드에 일괄 복사되었습니다</string>
+    <string name="add_rule">규칙 추가</string>
+    <string name="edit_rule">규칙 수정</string>
+    <string name="value_empty_error">값은 비워 둘 수 없습니다</string>
+    <string name="invalid_rule_format">규칙 형식이 올바르지 않습니다</string>
+    <string name="rule_exists">규칙이 이미 존재합니다</string>
+    <string name="block_rules_empty">수동 규칙이 아직 없습니다</string>
+    <string name="cloud_rule_empty">클라우드 규칙 소스가 아직 없습니다</string>
+    <string name="cloud_rule_add_source">소스 추가</string>
+    <string name="cloud_rule_edit_source">소스 수정</string>
+    <string name="cloud_rule_source_url">소스 URL</string>
+    <string name="cloud_rule_parse_type">파싱 유형</string>
+    <string name="cloud_rule_parse_as_value">파싱 방식: %1$s</string>
+    <string name="cloud_rule_parse_domain">도메인</string>
+    <string name="cloud_rule_parse_url">URL</string>
+    <string name="cloud_rule_parse_keyword">키워드</string>
+    <string name="cloud_rule_enabled">사용</string>
+    <string name="cloud_rule_auto_update">자동 업데이트</string>
+    <string name="cloud_rule_update_interval_hours">업데이트 간격(시간)</string>
+    <string name="cloud_rule_update_interval_helper">최소 1시간입니다. 기본값은 24시간입니다.</string>
+    <string name="cloud_rule_update_interval_value">간격: %1$d시간</string>
+    <string name="cloud_rule_counts">총 %1$d · 도메인 %2$d · URL %3$d · 키워드 %4$d</string>
+    <string name="cloud_rule_last_check">마지막 확인: %1$s</string>
+    <string name="cloud_rule_last_success">마지막 성공: %1$s</string>
+    <string name="cloud_rule_last_error">마지막 오류: %1$s</string>
+    <string name="cloud_rule_never">없음</string>
+    <string name="cloud_rule_update_now">지금 업데이트</string>
+    <string name="cloud_rule_delete_source_title">소스를 삭제할까요?</string>
+    <string name="cloud_rule_delete_source_message">이 소스를 삭제하시겠습니까?\n%1$s</string>
+    <string name="cloud_rule_source_added">클라우드 소스가 추가되었습니다</string>
+    <string name="cloud_rule_source_updated">클라우드 소스가 업데이트되었습니다</string>
+    <string name="cloud_rule_source_deleted">클라우드 소스가 삭제되었습니다</string>
+    <string name="cloud_rule_sync_success">클라우드 규칙이 업데이트되었습니다</string>
+    <string name="cloud_rule_invalid_url">유효한 HTTP 또는 HTTPS URL을 입력하세요</string>
+    <string name="cloud_rule_invalid_parse_type">유효한 파싱 유형을 선택하세요</string>
+    <string name="cloud_rule_invalid_interval">최소 1시간 이상의 간격을 입력하세요</string>
+    <string name="cloud_rule_duplicate_source">이 클라우드 소스는 이미 존재합니다</string>
+    <string name="cloud_rule_no_valid_rules">이 소스에서 유효한 규칙을 찾지 못했습니다</string>
+    <string name="cloud_rule_source_not_found">클라우드 소스를 찾을 수 없습니다</string>
+    <string name="cloud_rule_sync_failed_with_reason">클라우드 규칙 업데이트 실패: %1$s</string>
+    <string name="open_app_details_failed">앱 세부정보를 열 수 없습니다</string>
+    <string name="launch_app_failed">열기에 실패했습니다</string>
+    <string name="module_not_activated">모듈이 활성화되지 않았습니다</string>
+    <string name="save_success">성공적으로 저장되었습니다</string>
+    <string name="apk_package_name">APK 패키지 이름</string>
+    <string name="apk_size">APK 크기</string>
+    <string name="version_name">버전 이름</string>
+    <string name="version_code">버전 번호</string>
+    <string name="target_sdk">TargetSDK</string>
+    <string name="min_sdk">MinSDK</string>
+    <string name="install_time">설치 시간</string>
+    <string name="update_time">업데이트 시간</string>
+    <string name="sort_by_app_name">애플리케이션 이름</string>
+    <string name="sort_by_app_size">앱 크기</string>
+    <string name="sort_by_last_update">마지막 업데이트 시간</string>
+    <string name="sort_by_install_date">설치 날짜</string>
+    <string name="sort_by_target_version">대상 버전</string>
+    <string name="filter_configured">구성됨</string>
+    <string name="filter_recent_update">최근 업데이트</string>
+    <string name="updated">업데이트됨</string>
+    <string name="open">열기</string>
+    <string name="details">세부정보</string>
+    <string name="remove_from_blocklist">블랙리스트에서 제거</string>
+    <string name="add_to_blocklist">블랙리스트에 추가</string>
+    <string name="copied_to_clipboard_single">복사됨: %1$s</string>
+    <string name="copied_to_clipboard_batch">클립보드에 일괄 복사되었습니다</string>
+    <string name="confirm_clear_cache_title">캐시를 지우시겠습니까? </string>
+    <string name="confirm_clear_cache_message">현재 캐시 %1$s</string>
+    <string name="cache_cleared_recently">방금 지웠습니다</string>
+    <string name="invalid_file_format">파일 형식이 올바르지 않습니다. .rule 로 끝나는 파일을 선택하세요</string>
+</resources>

@@ -4,11 +4,11 @@
 
     <string name="error_title">An unexpected error occurred.\nSorry for the inconvenience.</string>
 
-    <string name="bottom_item_1">Apps</string>
-    <string name="bottom_item_2">Request</string>
-    <string name="bottom_item_3">Setting</string>
-    <string name="bottom_item_4">Block</string>
-    <string name="bottom_item_5">Home</string>
+    <string name="bottom_item_1">应用</string>
+    <string name="bottom_item_2">请求</string>
+    <string name="bottom_item_3">设置</string>
+    <string name="bottom_item_4">拦截</string>
+    <string name="bottom_item_5">首页</string>
 
     <string name="advanced_settings">高级</string>
     <string name="dex_dump_title">DEX Dump</string>
