@@ -9,6 +9,7 @@ import com.close.hook.ads.data.model.CloudRuleEntry
 import com.close.hook.ads.data.model.CloudRuleSource
 import com.close.hook.ads.data.model.CloudRuleSourceSummary
 import com.close.hook.ads.preference.HookPrefs
+import com.close.hook.ads.provider.UrlContentProvider
 import com.close.hook.ads.util.RuleUtils
 import kotlinx.coroutines.flow.Flow
 import java.io.BufferedReader
@@ -26,7 +27,8 @@ data class CloudRuleOperationResult(
 
 class CloudRuleRepository private constructor(context: Context) {
 
-    private val database = UrlDatabase.getDatabase(context.applicationContext)
+    private val appContext = context.applicationContext
+    private val database = UrlDatabase.getDatabase(appContext)
     private val sourceDao: CloudRuleSourceDao = database.cloudRuleSourceDao
     private val entryDao: CloudRuleEntryDao = database.cloudRuleEntryDao
 
@@ -82,7 +84,7 @@ class CloudRuleRepository private constructor(context: Context) {
                 )
                 CloudRuleOperationResult(true)
             }
-        }
+        }.also(::notifyIfSuccess)
     }
 
     suspend fun updateSource(
@@ -120,12 +122,12 @@ class CloudRuleRepository private constructor(context: Context) {
                 )
             )
             CloudRuleOperationResult(true)
-        }
+        }.also(::notifyIfSuccess)
     }
 
     suspend fun deleteSource(sourceId: Long): CloudRuleOperationResult {
         val deleted = sourceDao.deleteById(sourceId)
-        return CloudRuleOperationResult(deleted > 0)
+        return CloudRuleOperationResult(deleted > 0).also(::notifyIfSuccess)
     }
 
     suspend fun setSourceEnabled(sourceId: Long, enabled: Boolean): CloudRuleOperationResult {
@@ -134,7 +136,7 @@ class CloudRuleRepository private constructor(context: Context) {
                 ?: return@withTransaction CloudRuleOperationResult(false, "not_found")
             sourceDao.update(source.copy(enabled = enabled))
             CloudRuleOperationResult(true)
-        }
+        }.also(::notifyIfSuccess)
     }
 
     suspend fun setAutoUpdateEnabled(sourceId: Long, enabled: Boolean): CloudRuleOperationResult {
@@ -188,7 +190,7 @@ class CloudRuleRepository private constructor(context: Context) {
                 )
             }
 
-            CloudRuleOperationResult(true)
+            CloudRuleOperationResult(true).also(::notifyIfSuccess)
         } catch (e: Exception) {
             val errorMessage = e.message?.trim()?.takeIf { it.isNotEmpty() } ?: "Unknown error"
             database.withTransaction {
@@ -202,6 +204,12 @@ class CloudRuleRepository private constructor(context: Context) {
                 }
             }
             CloudRuleOperationResult(false, errorMessage)
+        }
+    }
+
+    private fun notifyIfSuccess(result: CloudRuleOperationResult) {
+        if (result.success) {
+            UrlContentProvider.notifyRulesChanged(appContext)
         }
     }
 

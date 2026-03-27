@@ -2,7 +2,10 @@ package com.close.hook.ads.hook.gc.network
 
 import android.content.Context
 import android.content.Intent
+import android.database.ContentObserver
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.core.content.contentValuesOf
 import com.close.hook.ads.data.model.BlockedRequest
@@ -24,9 +27,10 @@ import java.net.URL
 import java.net.URLDecoder
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
-import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 
 object RequestHook {
 
@@ -44,6 +48,9 @@ object RequestHook {
 
     private val requestIdGenerator = AtomicLong(0)
     private val announcedPendingRequestIds = ConcurrentHashMap.newKeySet<String>()
+    private val isRuleObserverRegistered = AtomicBoolean(false)
+    @Volatile
+    private var ruleChangeObserver: ContentObserver? = null
 
     private data class ParsingState(
         var isHeaderParsed: Boolean = false,
@@ -59,11 +66,7 @@ object RequestHook {
     internal val pendingRequests = ConcurrentHashMap<Long, BlockedRequest>()
     private val headerEndMarker = "\r\n\r\n".toByteArray()
 
-    private val URL_CONTENT_URI: Uri = Uri.Builder()
-        .scheme("content")
-        .authority(UrlContentProvider.AUTHORITY)
-        .appendPath(UrlContentProvider.URL_TABLE_NAME)
-        .build()
+    private val URL_CONTENT_URI: Uri = UrlContentProvider.CONTENT_URI
 
     private val queryCache: Cache<String, Triple<Boolean, String?, String?>> = CacheBuilder.newBuilder()
         .maximumSize(1000)
@@ -72,7 +75,29 @@ object RequestHook {
         .build()
 
     fun init(context: Context) {
-        applicationContext = context
+        applicationContext = context.applicationContext
+        registerRuleChangeObserver()
+    }
+
+    private fun registerRuleChangeObserver() {
+        if (!isRuleObserverRegistered.compareAndSet(false, true)) return
+
+        try {
+            val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+                override fun onChange(selfChange: Boolean) {
+                    queryCache.invalidateAll()
+                }
+
+                override fun onChange(selfChange: Boolean, uri: Uri?) {
+                    queryCache.invalidateAll()
+                }
+            }
+            applicationContext.contentResolver.registerContentObserver(URL_CONTENT_URI, true, observer)
+            ruleChangeObserver = observer
+        } catch (e: Exception) {
+            isRuleObserverRegistered.set(false)
+            XposedBridge.log("$LOG_PREFIX Failed to register rule observer: ${e.message}")
+        }
     }
 
     private fun scopedKey(scope: Long, rawValue: Long): Long = scope or (rawValue and KEY_VALUE_MASK)

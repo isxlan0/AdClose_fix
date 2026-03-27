@@ -67,6 +67,34 @@ object RuleUtils {
         if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
     }
 
+    fun buildDomainMatchCandidates(value: String?): List<String> {
+        val normalizedValue = normalizeValue(TYPE_DOMAIN, value)
+            ?: return emptyList()
+
+        if (normalizedValue.startsWith("*.")) {
+            return listOf(normalizedValue)
+        }
+
+        val normalizedHost = normalizedValue
+
+        val candidates = LinkedHashSet<String>()
+        candidates.add(normalizedHost)
+
+        val labels = normalizedHost.split('.')
+        if (labels.size <= 1 || labels.any { it.isBlank() }) {
+            return candidates.toList()
+        }
+
+        for (i in 1 until labels.size) {
+            val suffix = labels.subList(i, labels.size).joinToString(".")
+            if (suffix.isNotBlank()) {
+                candidates.add("*.$suffix")
+            }
+        }
+
+        return candidates.toList()
+    }
+
     private fun normalizeDomainValue(rawValue: String): String? {
         val trimmedValue = rawValue.trim()
         if (trimmedValue.isEmpty()) return null

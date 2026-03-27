@@ -3,6 +3,7 @@ package com.close.hook.ads.data
 import android.content.Context
 import com.close.hook.ads.data.database.UrlDatabase
 import com.close.hook.ads.data.model.Url
+import com.close.hook.ads.provider.UrlContentProvider
 import com.close.hook.ads.util.RuleUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -10,7 +11,8 @@ import kotlinx.coroutines.withContext
 
 class DataSource(context: Context) {
 
-    private val urlDao = UrlDatabase.getDatabase(context).urlDao
+    private val appContext = context.applicationContext
+    private val urlDao = UrlDatabase.getDatabase(appContext).urlDao
 
     fun searchUrls(searchText: String): Flow<List<Url>> =
         if (searchText.isBlank()) urlDao.loadAllList() else urlDao.searchUrls(searchText)
@@ -18,40 +20,56 @@ class DataSource(context: Context) {
     suspend fun addUrl(url: Url) {
         val normalizedUrl = RuleUtils.normalizeRule(url) ?: return
         if (!urlDao.isExist(normalizedUrl.type, normalizedUrl.url)) {
-            urlDao.insert(normalizedUrl)
+            if (urlDao.insert(normalizedUrl) > 0) {
+                notifyRulesChanged()
+            }
         }
     }
 
     suspend fun removeList(list: List<Url>) {
         if (list.isNotEmpty()) {
-            urlDao.deleteList(list)
+            if (urlDao.deleteList(list) > 0) {
+                notifyRulesChanged()
+            }
         }
     }
 
     suspend fun removeUrl(url: Url) {
-        urlDao.deleteUrl(url)
+        if (urlDao.deleteUrl(url) > 0) {
+            notifyRulesChanged()
+        }
     }
 
     suspend fun removeAll() {
-        urlDao.deleteAll()
+        if (urlDao.deleteAll() > 0) {
+            notifyRulesChanged()
+        }
     }
 
     suspend fun addListUrl(list: List<Url>) {
         val normalizedUrls = list.mapNotNull { RuleUtils.normalizeRule(it) }
             .distinctBy { RuleUtils.canonicalKey(it.type, it.url) }
         if (normalizedUrls.isNotEmpty()) {
-            urlDao.insertAll(normalizedUrls)
+            if (urlDao.insertAll(normalizedUrls).any { it > 0 }) {
+                notifyRulesChanged()
+            }
         }
     }
 
     suspend fun updateUrl(url: Url) {
-        RuleUtils.normalizeRule(url)?.let { urlDao.update(it) }
+        RuleUtils.normalizeRule(url)?.let {
+            if (urlDao.update(it) > 0) {
+                notifyRulesChanged()
+            }
+        }
     }
 
     suspend fun removeUrlString(type: String, url: String) {
         val normalizedType = RuleUtils.normalizeType(type) ?: return
         val normalizedUrl = RuleUtils.normalizeValue(normalizedType, url) ?: return
-        urlDao.deleteUrlString(normalizedType, normalizedUrl)
+        if (urlDao.deleteUrlString(normalizedType, normalizedUrl) > 0) {
+            notifyRulesChanged()
+        }
     }
 
     suspend fun isExist(type: String, url: String): Boolean =
@@ -65,11 +83,25 @@ class DataSource(context: Context) {
         withContext(Dispatchers.IO) {
             val normalizedUrls = urls.mapNotNull { RuleUtils.normalizeRule(it) }
                 .distinctBy { RuleUtils.canonicalKey(it.type, it.url) }
-            if (normalizedUrls.isEmpty()) emptyList() else urlDao.insertAll(normalizedUrls)
+            if (normalizedUrls.isEmpty()) {
+                emptyList()
+            } else {
+                urlDao.insertAll(normalizedUrls).also {
+                    if (it.any { id -> id > 0 }) {
+                        notifyRulesChanged()
+                    }
+                }
+            }
         }
 
     suspend fun deleteAll(): Int =
-        withContext(Dispatchers.IO) { urlDao.deleteAll() }
+        withContext(Dispatchers.IO) {
+            urlDao.deleteAll().also {
+                if (it > 0) {
+                    notifyRulesChanged()
+                }
+            }
+        }
 
     fun getAllUrls(): List<Url> {
         return urlDao.findAllList()
@@ -84,5 +116,9 @@ class DataSource(context: Context) {
                 INSTANCE ?: DataSource(context.applicationContext).also { INSTANCE = it }
             }
         }
+    }
+
+    private fun notifyRulesChanged() {
+        UrlContentProvider.notifyRulesChanged(appContext)
     }
 }

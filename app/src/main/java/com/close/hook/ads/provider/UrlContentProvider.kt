@@ -1,5 +1,6 @@
 package com.close.hook.ads.provider
 
+import android.content.Context
 import android.content.ContentProvider
 import android.content.ContentUris
 import android.content.ContentValues
@@ -52,7 +53,7 @@ class UrlContentProvider : ContentProvider() {
         val normalizedType = RuleUtils.normalizeType(queryType) ?: return null
         val manualMatch = when (normalizedType) {
             RuleUtils.TYPE_URL -> urlDao.findUrlMatch(queryValue)
-            RuleUtils.TYPE_DOMAIN -> urlDao.findDomainMatch(queryValue)
+            RuleUtils.TYPE_DOMAIN -> findManualDomainMatch(queryValue)
             RuleUtils.TYPE_KEYWORD -> urlDao.findKeywordMatch(queryValue)
             else -> null
         }
@@ -60,12 +61,24 @@ class UrlContentProvider : ContentProvider() {
 
         val cloudMatch = when (normalizedType) {
             RuleUtils.TYPE_URL -> cloudRuleEntryDao.findEnabledUrlMatch(queryValue)
-            RuleUtils.TYPE_DOMAIN -> cloudRuleEntryDao.findEnabledDomainMatch(queryValue)
+            RuleUtils.TYPE_DOMAIN -> findCloudDomainMatch(queryValue)
             RuleUtils.TYPE_KEYWORD -> cloudRuleEntryDao.findEnabledKeywordMatch(queryValue)
             else -> null
         } ?: return null
 
         return Url(type = cloudMatch.type, url = cloudMatch.url)
+    }
+
+    private fun findManualDomainMatch(queryValue: String): Url? {
+        val candidates = RuleUtils.buildDomainMatchCandidates(queryValue)
+        if (candidates.isEmpty()) return null
+        return urlDao.findDomainMatchByCandidates(candidates.first(), candidates)
+    }
+
+    private fun findCloudDomainMatch(queryValue: String): com.close.hook.ads.data.model.CloudRuleEntry? {
+        val candidates = RuleUtils.buildDomainMatchCandidates(queryValue)
+        if (candidates.isEmpty()) return null
+        return cloudRuleEntryDao.findEnabledDomainMatchByCandidates(candidates.first(), candidates)
     }
 
     private fun urlsToCursor(urls: List<Url>): MatrixCursor {
@@ -123,10 +136,19 @@ class UrlContentProvider : ContentProvider() {
         const val URL_TABLE_NAME = "url_info"
         private const val ID_URL_DATA = 1
         private const val ID_URL_DATA_ITEM = 2
+        val CONTENT_URI: Uri = Uri.Builder()
+            .scheme("content")
+            .authority(AUTHORITY)
+            .appendPath(URL_TABLE_NAME)
+            .build()
 
         private val uriMatcher = UriMatcher(UriMatcher.NO_MATCH).apply {
             addURI(AUTHORITY, URL_TABLE_NAME, ID_URL_DATA)
             addURI(AUTHORITY, "$URL_TABLE_NAME/#", ID_URL_DATA_ITEM)
+        }
+
+        fun notifyRulesChanged(context: Context) {
+            context.applicationContext.contentResolver.notifyChange(CONTENT_URI, null)
         }
     }
 }

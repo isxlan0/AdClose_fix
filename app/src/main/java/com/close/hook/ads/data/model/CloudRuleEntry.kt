@@ -20,6 +20,7 @@ import androidx.room.PrimaryKey
         Index(value = ["source_id"]),
         Index(value = ["type"]),
         Index(value = ["url"]),
+        Index(value = ["type", "url", "source_id"]),
         Index(value = ["source_id", "type", "url"], unique = true)
     ]
 )

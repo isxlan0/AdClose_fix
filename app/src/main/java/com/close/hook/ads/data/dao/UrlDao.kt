@@ -52,6 +52,17 @@ interface UrlDao {
     )
     fun findDomainMatch(host: String): Url?
 
+    @Query(
+        """
+        SELECT * FROM url_info
+        WHERE type = 'Domain'
+          AND url IN (:candidates)
+        ORDER BY CASE WHEN url = :host THEN 0 ELSE 1 END, LENGTH(url) DESC
+        LIMIT 1
+        """
+    )
+    fun findDomainMatchByCandidates(host: String, candidates: List<String>): Url?
+
     @Query("SELECT * FROM url_info WHERE LOWER(type) = 'keyword' AND INSTR(:value, url) > 0 LIMIT 1")
     fun findKeywordMatch(value: String): Url?
 

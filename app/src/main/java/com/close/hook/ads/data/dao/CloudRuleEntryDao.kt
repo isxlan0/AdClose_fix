@@ -52,6 +52,19 @@ interface CloudRuleEntryDao {
         SELECT e.* FROM cloud_rule_entry e
         INNER JOIN cloud_rule_source s ON s.id = e.source_id
         WHERE s.enabled = 1
+          AND e.type = 'Domain'
+          AND e.url IN (:candidates)
+        ORDER BY CASE WHEN e.url = :host THEN 0 ELSE 1 END, LENGTH(e.url) DESC
+        LIMIT 1
+        """
+    )
+    fun findEnabledDomainMatchByCandidates(host: String, candidates: List<String>): CloudRuleEntry?
+
+    @Query(
+        """
+        SELECT e.* FROM cloud_rule_entry e
+        INNER JOIN cloud_rule_source s ON s.id = e.source_id
+        WHERE s.enabled = 1
           AND LOWER(e.type) = 'keyword'
           AND INSTR(:value, e.url) > 0
         ORDER BY LENGTH(e.url) DESC

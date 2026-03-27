@@ -1,8 +1,10 @@
 package com.close.hook.ads.util
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RuleUtilsTest {
@@ -39,5 +41,48 @@ class RuleUtilsTest {
         )
 
         assertEquals("sub.example.com", normalized)
+    }
+
+    @Test
+    fun `buildDomainMatchCandidates returns host first then wildcard suffixes`() {
+        val candidates = RuleUtils.buildDomainMatchCandidates("https://a.b.Example.com/path")
+
+        assertEquals(
+            listOf(
+                "a.b.example.com",
+                "*.b.example.com",
+                "*.example.com",
+                "*.com"
+            ),
+            candidates
+        )
+    }
+
+    @Test
+    fun `buildDomainMatchCandidates handles bare host and adds suffix wildcards`() {
+        val candidates = RuleUtils.buildDomainMatchCandidates("Sub.Example.com")
+
+        assertEquals(listOf("sub.example.com", "*.example.com", "*.com"), candidates)
+    }
+
+    @Test
+    fun `buildDomainMatchCandidates ignores invalid inputs`() {
+        assertTrue(RuleUtils.buildDomainMatchCandidates("   ").isEmpty())
+        assertTrue(RuleUtils.buildDomainMatchCandidates(null).isEmpty())
+    }
+
+    @Test
+    fun `buildDomainMatchCandidates does not duplicate exact host among wildcards`() {
+        val candidates = RuleUtils.buildDomainMatchCandidates("A.B.Example.com")
+
+        assertEquals("a.b.example.com", candidates.first())
+        assertFalse(candidates.drop(1).contains("a.b.example.com"))
+    }
+
+    @Test
+    fun `buildDomainMatchCandidates preserves wildcard literal input`() {
+        val candidates = RuleUtils.buildDomainMatchCandidates("*.Example.com")
+
+        assertEquals(listOf("*.example.com"), candidates)
     }
 }
