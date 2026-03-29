@@ -89,6 +89,7 @@ object NativeRequestHook {
                     }
                 }
             } catch (e: Exception) {
+                RequestHook.releaseConnection(key)
                 XposedBridge.log("$LOG_PREFIX Error processing request buffer: ${e.message}")
             }
         } else {
@@ -105,6 +106,7 @@ object NativeRequestHook {
                     shouldBlock = true
                 }
             } catch (e: Exception) {
+                RequestHook.releaseConnection(key)
                 XposedBridge.log("$LOG_PREFIX Error processing response buffer: ${e.message}")
             }
         }

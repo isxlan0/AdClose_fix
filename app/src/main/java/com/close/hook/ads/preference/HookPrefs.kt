@@ -17,13 +17,10 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.long
 import kotlinx.serialization.json.longOrNull
-import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
@@ -34,9 +31,12 @@ object HookPrefs {
     private const val TAG = "HookPrefs"
     private const val GLOBAL_KEY = "global"
     private const val LOCAL_CACHE_DIR = "hook_prefs_cache"
+    private const val FILE_PENDING_SYNC_STATE = ".pending_remote_sync.json"
 
     private const val FILE_GENERAL_SETTINGS = "com.close.hook.ads_preferences.json"
     private const val FILE_PREFIX_CUSTOM_HOOK = "custom_hooks_"
+    private const val SYNC_OP_UPSERT = "upsert"
+    private const val SYNC_OP_DELETE = "delete"
 
     private const val KEY_PREFIX_OVERALL_HOOK = "overall_hook_enabled_"
     private const val KEY_PREFIX_ENABLE_LOGGING = "enable_logging_"
@@ -83,6 +83,7 @@ object HookPrefs {
     val generalSettingsFlow = generalSettingsCache.asStateFlow()
     
     private val cacheLock = Any()
+    private val pendingSyncLock = Any()
 
     private fun getLocalCacheDir() = try {
         closeApp.filesDir.resolve(LOCAL_CACHE_DIR).apply { mkdirs() }
@@ -92,15 +93,17 @@ object HookPrefs {
 
     private fun getLocalCacheFile(fileName: String) = getLocalCacheDir()?.resolve(fileName)
 
-    private fun readLocalCache(fileName: String): String {
-        val file = getLocalCacheFile(fileName) ?: return ""
+    private fun readLocalCacheOrNull(fileName: String): String? {
+        val file = getLocalCacheFile(fileName) ?: return null
         return try {
-            if (file.exists()) file.readText(StandardCharsets.UTF_8) else ""
+            if (file.exists()) file.readText(StandardCharsets.UTF_8) else null
         } catch (e: Exception) {
             Log.w(TAG, "Failed to read local cache: $fileName", e)
-            ""
+            null
         }
     }
+
+    private fun readLocalCache(fileName: String): String = readLocalCacheOrNull(fileName).orEmpty()
 
     private fun writeLocalCache(fileName: String, content: String): Boolean {
         val file = getLocalCacheFile(fileName) ?: return false
@@ -118,6 +121,10 @@ object HookPrefs {
         return !file.exists() || file.delete()
     }
 
+    private fun hasLocalCache(fileName: String): Boolean {
+        return getLocalCacheFile(fileName)?.exists() == true
+    }
+
     private fun getSettingsJson(): JsonObject {
         val cached = generalSettingsCache.value
         if (cached != null) return cached
@@ -127,17 +134,24 @@ object HookPrefs {
             if (cachedAgain != null) return cachedAgain
 
             val jsonObject = readSettingsFromFile()
-            generalSettingsCache.value = jsonObject
-            return jsonObject
+            if (jsonObject != null) {
+                generalSettingsCache.value = jsonObject
+                return jsonObject
+            }
+            return JsonObject(emptyMap())
         }
     }
 
     private fun updateSetting(transform: (MutableMap<String, JsonElement>) -> Unit) {
-        val current = getSettingsJson()
-
         val newJson: JsonObject
         synchronized(cacheLock) {
-            val mutableMap = current.toMutableMap()
+            val baseline = generalSettingsCache.value ?: readSettingsFromFile()
+            if (baseline == null) {
+                Log.e(TAG, "Write aborted for general settings: no safe baseline while framework service is disconnected.")
+                return
+            }
+
+            val mutableMap = baseline.toMutableMap()
             transform(mutableMap)
             newJson = JsonObject(mutableMap)
             generalSettingsCache.value = newJson
@@ -242,24 +256,36 @@ object HookPrefs {
 
     fun getCustomHookConfigs(packageName: String?): List<CustomHookInfo> {
         val effectiveKey = packageName ?: GLOBAL_KEY
-        return customHookCache.getOrPut(effectiveKey) {
-            val fileName = buildFileName(FILE_PREFIX_CUSTOM_HOOK, effectiveKey)
-            val content = readAllTextFromFile(fileName)
-            if (content.isEmpty()) {
+        customHookCache[effectiveKey]?.let { return it }
+
+        val fileName = buildFileName(FILE_PREFIX_CUSTOM_HOOK, effectiveKey)
+        val content = readAllTextFromFile(fileName)
+        if (content == null) {
+            Log.w(TAG, "Cannot load custom hooks for $effectiveKey: no safe baseline while framework service is disconnected.")
+            return emptyList()
+        }
+
+        val result = if (content.isBlank()) {
+            emptyList()
+        } else {
+            try {
+                jsonFormat.decodeFromString<List<CustomHookInfo>>(content)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error parsing JSON from file: $fileName", e)
                 emptyList()
-            } else {
-                try {
-                    jsonFormat.decodeFromString<List<CustomHookInfo>>(content)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error parsing JSON from file: $fileName", e)
-                    emptyList()
-                }
             }
         }
+        customHookCache[effectiveKey] = result
+        return result
     }
 
     fun setCustomHookConfigs(packageName: String?, configs: List<CustomHookInfo>) {
         val effectiveKey = packageName ?: GLOBAL_KEY
+        val fileName = buildFileName(FILE_PREFIX_CUSTOM_HOOK, effectiveKey)
+        if (!canModifySafely(fileName, customHookCache.containsKey(effectiveKey))) {
+            Log.e(TAG, "Write aborted for custom hooks: no safe baseline for $effectiveKey while framework service is disconnected.")
+            return
+        }
         
         if (configs.isEmpty()) {
             customHookCache.remove(effectiveKey)
@@ -268,7 +294,6 @@ object HookPrefs {
         }
 
         ioScope.launch {
-            val fileName = buildFileName(FILE_PREFIX_CUSTOM_HOOK, effectiveKey)
             if (configs.isEmpty()) {
                 deleteConfigFile(fileName)
             } else {
@@ -292,9 +317,9 @@ object HookPrefs {
         Log.d(TAG, "All caches invalidated.")
     }
 
-    private fun readSettingsFromFile(): JsonObject {
-        val content = readAllTextFromFile(FILE_GENERAL_SETTINGS)
-        return if (content.isNotEmpty()) {
+    private fun readSettingsFromFile(): JsonObject? {
+        val content = readAllTextFromFile(FILE_GENERAL_SETTINGS) ?: return null
+        return if (content.isNotBlank()) {
             try {
                 jsonFormat.parseToJsonElement(content) as? JsonObject ?: JsonObject(emptyMap())
             } catch (e: Exception) {
@@ -306,14 +331,28 @@ object HookPrefs {
         }
     }
 
-    private fun readAllTextFromFile(fileName: String): String {
+    private fun readAllTextFromFile(fileName: String): String? {
         val accessor = fileAccessor
         if (accessor == null) {
-            return readLocalCache(fileName)
+            return readLocalCacheOrNull(fileName)
         }
 
-        if (!remoteFileExists(fileName, accessor)) {
-            return readLocalCache(fileName)
+        when (getPendingSyncOperation(fileName)) {
+            SYNC_OP_UPSERT -> {
+                readLocalCacheOrNull(fileName)?.let { return it }
+            }
+            SYNC_OP_DELETE -> return ""
+        }
+
+        val remoteFiles = try {
+            accessor.listRemoteFiles()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to list remote files for $fileName", e)
+            return readLocalCacheOrNull(fileName)
+        }
+
+        if (remoteFiles == null || !remoteFiles.contains(fileName)) {
+            return ""
         }
 
         return try {
@@ -325,26 +364,67 @@ object HookPrefs {
                         }
                     }
                 }
-            } ?: readLocalCache(fileName)
+            } ?: readLocalCacheOrNull(fileName)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to read remote file: $fileName", e)
-            readLocalCache(fileName)
+            readLocalCacheOrNull(fileName)
         }
     }
 
-    private fun remoteFileExists(fileName: String, accessor: IFileAccessor): Boolean {
+    private fun canModifySafely(fileName: String, hasInMemoryBaseline: Boolean): Boolean {
+        return fileAccessor != null || hasInMemoryBaseline || hasLocalCache(fileName)
+    }
+
+    private fun loadPendingSyncState(): MutableMap<String, String> {
+        val raw = readLocalCacheOrNull(FILE_PENDING_SYNC_STATE) ?: return mutableMapOf()
         return try {
-            val files = accessor.listRemoteFiles()
-            files != null && files.contains(fileName)
+            jsonFormat.decodeFromString<Map<String, String>>(raw).toMutableMap()
         } catch (e: Exception) {
-            false
+            Log.w(TAG, "Failed to parse pending sync state.", e)
+            mutableMapOf()
         }
     }
 
-    private fun writeTextToFile(fileName: String, content: String): Boolean {
-        val localSuccess = writeLocalCache(fileName, content)
-        val accessor = fileAccessor ?: return localSuccess
-        val remoteSuccess = try {
+    private fun savePendingSyncState(state: Map<String, String>) {
+        if (state.isEmpty()) {
+            deleteLocalCache(FILE_PENDING_SYNC_STATE)
+            return
+        }
+
+        val serialized = runCatching { jsonFormat.encodeToString(state) }.getOrElse {
+            Log.e(TAG, "Failed to encode pending sync state.", it)
+            return
+        }
+        writeLocalCache(FILE_PENDING_SYNC_STATE, serialized)
+    }
+
+    private fun markPendingSync(fileName: String, operation: String) {
+        synchronized(pendingSyncLock) {
+            val state = loadPendingSyncState()
+            state[fileName] = operation
+            savePendingSyncState(state)
+        }
+    }
+
+    private fun clearPendingSync(fileName: String) {
+        synchronized(pendingSyncLock) {
+            val state = loadPendingSyncState()
+            if (state.remove(fileName) != null) {
+                savePendingSyncState(state)
+            }
+        }
+    }
+
+    private fun snapshotPendingSyncState(): Map<String, String> {
+        return synchronized(pendingSyncLock) { loadPendingSyncState().toMap() }
+    }
+
+    private fun getPendingSyncOperation(fileName: String): String? {
+        return synchronized(pendingSyncLock) { loadPendingSyncState()[fileName] }
+    }
+
+    private fun writeRemoteText(accessor: IFileAccessor, fileName: String, content: String): Boolean {
+        return try {
             accessor.openRemoteFile(fileName, "rw")?.use { pfd ->
                 FileOutputStream(pfd.fileDescriptor).use { fos ->
                     fos.channel.truncate(0)
@@ -355,19 +435,40 @@ object HookPrefs {
             }
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to write text to file: $fileName", e)
+            Log.e(TAG, "Failed to write remote file: $fileName", e)
             false
+        }
+    }
+
+    private fun deleteRemoteFile(accessor: IFileAccessor, fileName: String): Boolean {
+        return try {
+            accessor.deleteRemoteFile(fileName)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to delete remote file: $fileName", e)
+            false
+        }
+    }
+
+    private fun writeTextToFile(fileName: String, content: String): Boolean {
+        val localSuccess = writeLocalCache(fileName, content)
+        val accessor = fileAccessor
+        val remoteSuccess = if (accessor != null) writeRemoteText(accessor, fileName, content) else false
+        if (remoteSuccess) {
+            clearPendingSync(fileName)
+        } else if (localSuccess) {
+            markPendingSync(fileName, SYNC_OP_UPSERT)
         }
         return remoteSuccess || localSuccess
     }
 
     private fun deleteConfigFile(fileName: String): Boolean {
         val localDeleted = deleteLocalCache(fileName)
-        val remoteDeleted = try {
-            fileAccessor?.deleteRemoteFile(fileName) ?: false
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to delete config file: $fileName", e)
-            false
+        val accessor = fileAccessor
+        val remoteDeleted = if (accessor != null) deleteRemoteFile(accessor, fileName) else false
+        if (remoteDeleted) {
+            clearPendingSync(fileName)
+        } else if (localDeleted) {
+            markPendingSync(fileName, SYNC_OP_DELETE)
         }
         return localDeleted || remoteDeleted
     }
@@ -402,33 +503,33 @@ object HookPrefs {
 
     fun syncLocalCacheToRemote() {
         val accessor = fileAccessor ?: return
-        val cacheDir = getLocalCacheDir() ?: return
-        val localFiles = cacheDir.listFiles()?.filter { it.isFile } ?: return
-        val managedLocalNames = localFiles.map { it.name }.toSet()
+        val pendingState = snapshotPendingSyncState()
+        if (pendingState.isEmpty()) return
 
-        localFiles.forEach { file ->
-            runCatching {
-                val content = file.readText(StandardCharsets.UTF_8)
-                accessor.openRemoteFile(file.name, "rw")?.use { pfd ->
-                    FileOutputStream(pfd.fileDescriptor).use { fos ->
-                        fos.channel.truncate(0)
-                        fos.writer(StandardCharsets.UTF_8).use { writer ->
-                            writer.write(content)
-                        }
+        pendingState.forEach { (fileName, operation) ->
+            if (fileName == FILE_PENDING_SYNC_STATE) return@forEach
+
+            when (operation) {
+                SYNC_OP_UPSERT -> {
+                    val localContent = readLocalCacheOrNull(fileName)
+                    if (localContent == null) {
+                        Log.w(TAG, "Skipped pending upsert for missing local file: $fileName")
+                        return@forEach
+                    }
+                    if (writeRemoteText(accessor, fileName, localContent)) {
+                        clearPendingSync(fileName)
                     }
                 }
-            }.onFailure { error ->
-                Log.w(TAG, "Failed to sync local cache to remote: ${file.name}", error)
+                SYNC_OP_DELETE -> {
+                    if (deleteRemoteFile(accessor, fileName)) {
+                        clearPendingSync(fileName)
+                    }
+                }
+                else -> {
+                    Log.w(TAG, "Unknown pending sync operation for $fileName: $operation")
+                    clearPendingSync(fileName)
+                }
             }
-        }
-
-        runCatching {
-            accessor.listRemoteFiles()
-                ?.filter { it == FILE_GENERAL_SETTINGS || it.startsWith(FILE_PREFIX_CUSTOM_HOOK) }
-                ?.filterNot { it in managedLocalNames }
-                ?.forEach { accessor.deleteRemoteFile(it) }
-        }.onFailure { error ->
-            Log.w(TAG, "Failed to prune remote cache files", error)
         }
     }
 }

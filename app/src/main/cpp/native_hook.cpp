@@ -10,6 +10,11 @@
 #include <unwind.h>
 #include <iomanip>
 #include <sstream>
+#include <pthread.h>
+#include <unordered_map>
+#include <mutex>
+#include <atomic>
+#include <cstring>
 #include "shadowhook.h"
 
 #if DEBUG
@@ -21,12 +26,22 @@
     #define LOGE(...)
 #endif
 
-#define MAX_BUFFER_SIZE (32 * 1024)
 #define MAX_STACK_DEPTH 12
+#define MAX_PAYLOAD_SIZE (512 * 1024)
 
 static JavaVM *gJvm = nullptr;
 static jclass gNativeRequestHookClass = nullptr;
 static jmethodID gOnNativeDataMethod = nullptr;
+
+static pthread_key_t g_thread_key;
+
+thread_local bool g_is_in_hook = false;
+
+static std::atomic<uint8_t> g_fd_cache[65536];
+
+static std::mutex g_cache_mutex;
+static std::unordered_map<jlong, std::string> g_stack_cache;
+static std::unordered_map<int, std::string> g_socket_info_cache;
 
 // --- Stub 定义 ---
 typedef ssize_t (*type_send)(int, const void *, size_t, int);
@@ -35,6 +50,10 @@ typedef ssize_t (*type_sendto)(int, const void *, size_t, int, const struct sock
 typedef ssize_t (*type_recvfrom)(int, void *, size_t, int, struct sockaddr *, socklen_t *);
 typedef ssize_t (*type_write)(int, const void *, size_t);
 typedef ssize_t (*type_read)(int, void *, size_t);
+typedef int (*type_close)(int);
+typedef int (*type_SSL_write)(void *ssl, const void *buf, int num);
+typedef int (*type_SSL_read)(void *ssl, void *buf, int num);
+typedef void (*type_SSL_free)(void *ssl);
 
 static type_send orig_send;
 static type_recv orig_recv;
@@ -42,8 +61,23 @@ static type_sendto orig_sendto;
 static type_recvfrom orig_recvfrom;
 static type_write orig_write;
 static type_read orig_read;
+static type_close orig_close;
+static type_SSL_write orig_SSL_write;
+static type_SSL_read orig_SSL_read;
+static type_SSL_free orig_SSL_free;
 
-// --- 堆栈回溯 ---
+struct ScopedHookGuard {
+    ScopedHookGuard() { g_is_in_hook = true; }
+    ~ScopedHookGuard() { g_is_in_hook = false; }
+};
+
+static void detach_current_thread(void *env) {
+    if (gJvm != nullptr && env != nullptr) {
+        gJvm->DetachCurrentThread();
+    }
+}
+
+// --- 堆栈与信息工具 ---
 
 struct BacktraceState {
     void** current;
@@ -62,7 +96,7 @@ _Unwind_Reason_Code unwind_callback(struct _Unwind_Context* context, void* arg) 
     return _URC_NO_REASON;
 }
 
-std::string get_native_stack() {
+std::string get_native_stack_internal() {
     void* buffer[MAX_STACK_DEPTH];
     BacktraceState state = {buffer, buffer + MAX_STACK_DEPTH};
     _Unwind_Backtrace(unwind_callback, &state);
@@ -76,8 +110,8 @@ std::string get_native_stack() {
             uintptr_t offset = (uintptr_t)addr - (uintptr_t)info.dli_fbase;
             const char* lib_name = strrchr(info.dli_fname, '/');
             lib_name = (lib_name != nullptr) ? lib_name + 1 : info.dli_fname;
-            ss << "  #" << std::setw(2) << (ptr - buffer) << " pc " 
-               << std::setw(8) << std::setfill('0') << std::hex << offset 
+            ss << "  #" << std::setw(2) << (ptr - buffer) << " pc "
+               << std::setw(8) << std::setfill('0') << std::hex << offset
                << "  " << lib_name;
             if (info.dli_sname) ss << " (" << info.dli_sname << ")";
             ss << "\n";
@@ -88,8 +122,25 @@ std::string get_native_stack() {
     return ss.str();
 }
 
-std::string get_socket_info(int fd) {
+std::string get_cached_stack(jlong id) {
+    std::lock_guard<std::mutex> lock(g_cache_mutex);
+    auto it = g_stack_cache.find(id);
+    if (it != g_stack_cache.end()) {
+        return it->second;
+    }
+    std::string stack = get_native_stack_internal();
+    g_stack_cache[id] = stack;
+    return stack;
+}
+
+std::string get_cached_socket_info(int fd) {
     if (fd <= 0) return "";
+    {
+        std::lock_guard<std::mutex> lock(g_cache_mutex);
+        auto it = g_socket_info_cache.find(fd);
+        if (it != g_socket_info_cache.end()) return it->second;
+    }
+
     struct sockaddr_storage addr;
     socklen_t len = sizeof(addr);
     if (getpeername(fd, (struct sockaddr*)&addr, &len) != 0) return "";
@@ -108,128 +159,210 @@ std::string get_socket_info(int fd) {
     } else {
         return "unknown";
     }
-    return std::string(ip_str) + ":" + std::to_string(port);
+
+    std::string info = std::string(ip_str) + ":" + std::to_string(port);
+    std::lock_guard<std::mutex> lock(g_cache_mutex);
+    g_socket_info_cache[fd] = info;
+    return info;
 }
 
-bool is_socket(int fd) {
+// FD 性能判定核心
+bool is_network_fd(int fd) {
+    if (fd < 0 || fd >= 65536) return false;
+    uint8_t state = g_fd_cache[fd].load(std::memory_order_relaxed);
+    if (state != 0) return state == 2;
+
     struct stat statbuf;
-    if (fstat(fd, &statbuf) != 0) return false;
-    return S_ISSOCK(statbuf.st_mode);
-}
+    if (fstat(fd, &statbuf) != 0 || !S_ISSOCK(statbuf.st_mode)) {
+        g_fd_cache[fd].store(1, std::memory_order_relaxed);
+        return false;
+    }
 
-bool is_network_socket(int fd) {
     struct sockaddr_storage addr;
     socklen_t len = sizeof(addr);
-    if (getsockname(fd, (struct sockaddr*)&addr, &len) != 0) return false;
-    return (addr.ss_family == AF_INET || addr.ss_family == AF_INET6);
+    if (getsockname(fd, (struct sockaddr*)&addr, &len) == 0 &&
+        (addr.ss_family == AF_INET || addr.ss_family == AF_INET6)) {
+        g_fd_cache[fd].store(2, std::memory_order_relaxed);
+        return true;
+    }
+
+    g_fd_cache[fd].store(1, std::memory_order_relaxed);
+    return false;
 }
 
 // 回调核心
 bool callback_kotlin(jlong id, bool is_write, const void *buf, size_t len, bool is_ssl) {
-    if (gJvm == nullptr || gNativeRequestHookClass == nullptr || buf == nullptr) return false;
-    if (len <= 0 || len > 100 * 1024 * 1024) return false;
+    if (gJvm == nullptr || gNativeRequestHookClass == nullptr || buf == nullptr || len == 0) return false;
+    if (len > MAX_PAYLOAD_SIZE) return false;
 
     if (!is_ssl) {
-        if (!is_socket(id)) return false;
-        if (!is_network_socket(id)) return false;
+        int fd = static_cast<int>(id);
+        if (!is_network_fd(fd)) return false;
     }
 
-    JNIEnv *env;
-    bool needsDetach = false;
+    JNIEnv *env = nullptr;
     int getEnvStat = gJvm->GetEnv((void **)&env, JNI_VERSION_1_6);
     if (getEnvStat == JNI_EDETACHED) {
         if (gJvm->AttachCurrentThread(&env, nullptr) != 0) return false;
-        needsDetach = true;
+        pthread_setspecific(g_thread_key, env);
     } else if (getEnvStat != JNI_OK) {
         return false;
     }
 
-    bool shouldBlock = false;
-    size_t copy_len = (len > MAX_BUFFER_SIZE) ? MAX_BUFFER_SIZE : len;
+    jbyteArray jData = env->NewByteArray(static_cast<jsize>(len));
+    if (jData == nullptr) return false;
+    env->SetByteArrayRegion(jData, 0, static_cast<jsize>(len), (const jbyte *)buf);
 
-    jbyteArray jData = env->NewByteArray(copy_len);
-    if (jData != nullptr) {
-        env->SetByteArrayRegion(jData, 0, copy_len, (const jbyte *)buf);
-        
-        std::string info = (!is_ssl && id > 0) ? get_socket_info(id) : "";
-        jstring jInfo = env->NewStringUTF(info.c_str());
-        
-        std::string stack = get_native_stack();
-        jstring jStack = env->NewStringUTF(stack.c_str());
+    std::string info = (!is_ssl && id > 0) ? get_cached_socket_info(static_cast<int>(id)) : "";
+    jstring jInfo = info.empty() ? nullptr : env->NewStringUTF(info.c_str());
 
-        shouldBlock = env->CallStaticBooleanMethod(
-            gNativeRequestHookClass, 
-            gOnNativeDataMethod, 
-            id, is_write, jData, jInfo, jStack, is_ssl
-        );
+    std::string stack = get_cached_stack(id);
+    jstring jStack = stack.empty() ? nullptr : env->NewStringUTF(stack.c_str());
 
-        env->DeleteLocalRef(jData);
-        env->DeleteLocalRef(jInfo);
-        env->DeleteLocalRef(jStack);
-    }
+    bool shouldBlock = env->CallStaticBooleanMethod(
+        gNativeRequestHookClass,
+        gOnNativeDataMethod,
+        id, is_write, jData, jInfo, jStack, is_ssl
+    );
 
-    if (needsDetach) gJvm->DetachCurrentThread();
+    env->DeleteLocalRef(jData);
+    if (jInfo != nullptr) env->DeleteLocalRef(jInfo);
+    if (jStack != nullptr) env->DeleteLocalRef(jStack);
+
     return shouldBlock;
 }
 
 // --- Hooks ---
 
 ssize_t hook_send(int s, const void *buf, size_t len, int flags) {
-    if (callback_kotlin(s, true, buf, len, false)) return -1;
+    if (g_is_in_hook) return orig_send(s, buf, len, flags);
+    ScopedHookGuard guard;
+    if (callback_kotlin(static_cast<jlong>(s), true, buf, len, false)) return -1;
     return orig_send(s, buf, len, flags);
 }
 
 ssize_t hook_recv(int s, void *buf, size_t len, int flags) {
+    if (g_is_in_hook) return orig_recv(s, buf, len, flags);
+    ScopedHookGuard guard;
     ssize_t ret = orig_recv(s, buf, len, flags);
-    if (ret > 0) callback_kotlin(s, false, buf, ret, false);
+    if (ret > 0) callback_kotlin(static_cast<jlong>(s), false, buf, ret, false);
     return ret;
 }
 
 ssize_t hook_sendto(int s, const void *buf, size_t len, int flags, const struct sockaddr *to, socklen_t tolen) {
-    if (callback_kotlin(s, true, buf, len, false)) return -1;
+    if (g_is_in_hook) return orig_sendto(s, buf, len, flags, to, tolen);
+    ScopedHookGuard guard;
+    if (callback_kotlin(static_cast<jlong>(s), true, buf, len, false)) return -1;
     return orig_sendto(s, buf, len, flags, to, tolen);
 }
 
 ssize_t hook_recvfrom(int s, void *buf, size_t len, int flags, struct sockaddr *from, socklen_t *fromlen) {
+    if (g_is_in_hook) return orig_recvfrom(s, buf, len, flags, from, fromlen);
+    ScopedHookGuard guard;
     ssize_t ret = orig_recvfrom(s, buf, len, flags, from, fromlen);
-    if (ret > 0) callback_kotlin(s, false, buf, ret, false);
+    if (ret > 0) callback_kotlin(static_cast<jlong>(s), false, buf, ret, false);
     return ret;
 }
 
 ssize_t hook_write(int fd, const void *buf, size_t count) {
-    if (fd > 2 && callback_kotlin(fd, true, buf, count, false)) return -1;
+    if (g_is_in_hook || fd <= 2) return orig_write(fd, buf, count);
+    ScopedHookGuard guard;
+    if (callback_kotlin(static_cast<jlong>(fd), true, buf, count, false)) return -1;
     return orig_write(fd, buf, count);
 }
 
 ssize_t hook_read(int fd, void *buf, size_t count) {
+    if (g_is_in_hook || fd <= 2) return orig_read(fd, buf, count);
+    ScopedHookGuard guard;
     ssize_t ret = orig_read(fd, buf, count);
-    if (ret > 0 && fd > 2) callback_kotlin(fd, false, buf, ret, false);
+    if (ret > 0) callback_kotlin(static_cast<jlong>(fd), false, buf, ret, false);
     return ret;
+}
+
+int hook_close(int fd) {
+    if (g_is_in_hook) return orig_close(fd);
+    ScopedHookGuard guard;
+
+    if (fd >= 0 && fd < 65536) {
+        g_fd_cache[fd].store(0, std::memory_order_relaxed);
+    }
+    {
+        std::lock_guard<std::mutex> lock(g_cache_mutex);
+        g_stack_cache.erase(static_cast<jlong>(fd));
+        g_socket_info_cache.erase(fd);
+    }
+    return orig_close(fd);
+}
+
+int hook_SSL_write(void *ssl, const void *buf, int num) {
+    if (g_is_in_hook) return orig_SSL_write(ssl, buf, num);
+    ScopedHookGuard guard;
+    if (buf != nullptr && num > 0) {
+        callback_kotlin(reinterpret_cast<jlong>(ssl), true, buf, static_cast<size_t>(num), true);
+    }
+    return orig_SSL_write(ssl, buf, num);
+}
+
+int hook_SSL_read(void *ssl, void *buf, int num) {
+    if (g_is_in_hook) return orig_SSL_read(ssl, buf, num);
+    ScopedHookGuard guard;
+    int ret = orig_SSL_read(ssl, buf, num);
+    if (ret > 0 && buf != nullptr) {
+        callback_kotlin(reinterpret_cast<jlong>(ssl), false, buf, static_cast<size_t>(ret), true);
+    }
+    return ret;
+}
+
+void hook_SSL_free(void *ssl) {
+    if (g_is_in_hook) {
+        orig_SSL_free(ssl);
+        return;
+    }
+    ScopedHookGuard guard;
+    {
+        std::lock_guard<std::mutex> lock(g_cache_mutex);
+        g_stack_cache.erase(reinterpret_cast<jlong>(ssl));
+    }
+    orig_SSL_free(ssl);
 }
 
 // --- Init ---
 
-void hook_func(const char *lib_name, const char *sym_name, void *hook_func, void **orig_func) {
+bool hook_func(const char *lib_name, const char *sym_name, void *hook_func, void **orig_func) {
     void *stub = shadowhook_hook_sym_name(lib_name, sym_name, hook_func, orig_func);
     if (stub != nullptr) {
         LOGI("ShadowHook SUCCESS: %s in %s", sym_name, lib_name ? lib_name : "global");
+        return true;
     } else {
         if (shadowhook_get_errno() != 2) {
             LOGE("ShadowHook ERROR: %s", sym_name);
         }
+        return false;
     }
+}
+
+void hook_func_once(const char *lib_name, const char *sym_name, void *hook_target, void **orig_func) {
+    if (*orig_func != nullptr) {
+        return;
+    }
+    hook_func(lib_name, sym_name, hook_target, orig_func);
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_close_hook_ads_hook_gc_network_NativeRequestHook_initNativeHook(JNIEnv *env, jobject thiz) {
     env->GetJavaVM(&gJvm);
-    
+    pthread_key_create(&g_thread_key, detach_current_thread);
+
     jclass clazz = env->FindClass("com/close/hook/ads/hook/gc/network/NativeRequestHook");
     if (!clazz) return;
     gNativeRequestHookClass = (jclass) env->NewGlobalRef(clazz);
-    
+
     gOnNativeDataMethod = env->GetStaticMethodID(clazz, "onNativeData", "(JZ[BLjava/lang/String;Ljava/lang/String;Z)Z");
     if (!gOnNativeDataMethod) return;
+
+    for (int i = 0; i < 65536; ++i) {
+        g_fd_cache[i].store(0, std::memory_order_relaxed);
+    }
 
     shadowhook_init(SHADOWHOOK_MODE_UNIQUE, true);
 
@@ -240,4 +373,23 @@ Java_com_close_hook_ads_hook_gc_network_NativeRequestHook_initNativeHook(JNIEnv 
     hook_func("libc.so", "recvfrom", (void*)hook_recvfrom, (void**)&orig_recvfrom);
     hook_func("libc.so", "write", (void*)hook_write, (void**)&orig_write);
     hook_func("libc.so", "read", (void*)hook_read, (void**)&orig_read);
+    hook_func("libc.so", "close", (void*)hook_close, (void**)&orig_close);
+
+    // Hook SSL
+    const char* ssl_libs[] = {
+        "libssl.so",
+        "libboringssl.so",
+        "libconscrypt_jni.so",
+        "libcronet.so",
+        "libsscronet.so"
+    };
+    const size_t ssl_lib_count = sizeof(ssl_libs) / sizeof(ssl_libs[0]);
+    for (size_t i = 0; i < ssl_lib_count; ++i) {
+        hook_func_once(ssl_libs[i], "SSL_write", (void*)hook_SSL_write, (void**)&orig_SSL_write);
+        hook_func_once(ssl_libs[i], "SSL_read", (void*)hook_SSL_read, (void**)&orig_SSL_read);
+        hook_func_once(ssl_libs[i], "NativeCrypto_SSL_write", (void*)hook_SSL_write, (void**)&orig_SSL_write);
+        hook_func_once(ssl_libs[i], "NativeCrypto_SSL_read", (void*)hook_SSL_read, (void**)&orig_SSL_read);
+        hook_func_once(ssl_libs[i], "SSL_free", (void*)hook_SSL_free, (void**)&orig_SSL_free);
+        hook_func_once(ssl_libs[i], "NativeCrypto_SSL_free", (void*)hook_SSL_free, (void**)&orig_SSL_free);
+    }
 }

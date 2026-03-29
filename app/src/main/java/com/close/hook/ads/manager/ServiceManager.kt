@@ -55,6 +55,7 @@ object ServiceManager {
                 Log.i(TAG, "LSPosed service connected: ${boundService.frameworkName} v${boundService.frameworkVersion}")
                 hasSuccessfulBinding.set(true)
                 _connectionState.value = ConnectionState.Connected(boundService)
+                HookPrefs.invalidateCaches()
                 HookPrefs.syncLocalCacheToRemote()
             }
 
