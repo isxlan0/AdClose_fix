@@ -32,7 +32,7 @@ object PackageVisibilityHandler {
         "overall_hook_enabled_"
     )
 
-    private val threadWakeLock = Object()
+    private val threadWakeLock = Any()
 
     @Volatile
     private var cachedSystemContext: Context? = null
@@ -99,7 +99,7 @@ object PackageVisibilityHandler {
 
                                 if (disabledPackagesInstance != null) {
                                     val arraySetClass = Class.forName("android.util.ArraySet")
-                                    addMethod = arraySetClass.getMethod("add", Object::class.java)
+                                    addMethod = arraySetClass.getMethod("add", Any::class.java)
                                     clearMethod = arraySetClass.getMethod("clear")
                                 }
 
