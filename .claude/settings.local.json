@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /s /b D:DesktopVSCODEAdClose_fix)",
+      "Bash(findstr /i \"XposedInterface\")",
+      "Bash(findstr /v \".gradle\")",
+      "Bash(Get-ChildItem -Path \"D:\\\\Desktop\\\\VSCODE\\\\AdClose_fix\" -Recurse -Filter \"*XposedInterface*\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(find D:/Desktop/VSCODE/AdClose_fix -name *XposedInterface*)",
+      "Bash(find D:/Desktop/VSCODE/AdClose_fix -path */io/github/libxposed/* -name *.jar)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebSearch",
+      "WebFetch(domain:github.com)"
+    ]
+  }
+}
