@@ -85,13 +85,9 @@ object AppIconLoader {
             return Bitmap.createScaledBitmap(bitmap, size, size, true)
         }
 
-        val config = if (opacity != android.graphics.PixelFormat.OPAQUE) {
-            Bitmap.Config.ARGB_8888
-        } else {
-            Bitmap.Config.RGB_565
-        }
-
-        val bitmap = Bitmap.createBitmap(size, size, config)
+        // Generic drawables may contain transparency and `opacity` is deprecated,
+        // so prefer a safe config here instead of relying on the deprecated API.
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         setBounds(0, 0, size, size)
         draw(canvas)
