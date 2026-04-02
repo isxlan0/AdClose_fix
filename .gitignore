@@ -87,3 +87,4 @@ lint/tmp/
 
 # Keep local libraries
 !/app/libs/
+.gradle-user/

@@ -14,6 +14,7 @@ import com.close.hook.ads.hook.ha.AppAds
 import com.close.hook.ads.hook.ha.AutoHookAds
 import com.close.hook.ads.hook.ha.CustomHookAds
 import com.close.hook.ads.hook.ha.SDKAdsKit
+import com.close.hook.ads.hook.system.PackageVisibilityHandler
 import com.close.hook.ads.hook.util.ContextUtil
 import com.close.hook.ads.hook.util.DexDumpUtil
 import com.close.hook.ads.hook.util.LogProxy
@@ -38,7 +39,11 @@ object HookLogic {
 
     fun initializeModule(xposedInterface: XposedInterface, processName: String) {
         this.xposedInterface = xposedInterface
-        ContextUtil.setupContextHooks()
+        if (processName == "system") {
+            PackageVisibilityHandler.init(xposedInterface)
+        } else {
+            ContextUtil.setupContextHooks()
+        }
         XposedBridge.log("LibXposedEntry: Initialized for process $processName")
     }
 

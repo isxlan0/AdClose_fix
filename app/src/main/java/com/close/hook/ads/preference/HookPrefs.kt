@@ -1,5 +1,6 @@
 package com.close.hook.ads.preference
 
+import android.content.Intent
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import com.close.hook.ads.closeApp
@@ -37,11 +38,13 @@ object HookPrefs {
     private const val FILE_PREFIX_CUSTOM_HOOK = "custom_hooks_"
     private const val SYNC_OP_UPSERT = "upsert"
     private const val SYNC_OP_DELETE = "delete"
+    private const val ACTION_UPDATE_PACKAGE_VISIBILITY = "com.close.hook.ads.ACTION_UPDATE_PKG_VISIBILITY"
 
     private const val KEY_PREFIX_OVERALL_HOOK = "overall_hook_enabled_"
     private const val KEY_PREFIX_ENABLE_LOGGING = "enable_logging_"
     const val KEY_COLLECT_RESPONSE_BODY = "collect_response_body_enabled"
     const val KEY_ENABLE_DEX_DUMP = "enable_dex_dump"
+    const val KEY_ENABLE_PACKAGE_VISIBILITY_BYPASS = "enable_package_visibility_bypass"
     const val KEY_REQUEST_CACHE_EXPIRATION = "request_cache_expiration"
 
     private val jsonFormat = Json { 
@@ -84,6 +87,14 @@ object HookPrefs {
     
     private val cacheLock = Any()
     private val pendingSyncLock = Any()
+
+    private data class WriteResult(
+        val localSuccess: Boolean,
+        val remoteSuccess: Boolean
+    ) {
+        val isSuccess: Boolean
+            get() = localSuccess || remoteSuccess
+    }
 
     private fun getLocalCacheDir() = try {
         closeApp.filesDir.resolve(LOCAL_CACHE_DIR).apply { mkdirs() }
@@ -160,7 +171,10 @@ object HookPrefs {
         ioScope.launch {
             try {
                 val jsonString = jsonFormat.encodeToString(newJson)
-                writeTextToFile(FILE_GENERAL_SETTINGS, jsonString)
+                val writeResult = writeTextToFileDetailed(FILE_GENERAL_SETTINGS, jsonString)
+                if (writeResult.remoteSuccess) {
+                    notifyPackageVisibilityChanged()
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to persist settings", e)
             }
@@ -450,6 +464,10 @@ object HookPrefs {
     }
 
     private fun writeTextToFile(fileName: String, content: String): Boolean {
+        return writeTextToFileDetailed(fileName, content).isSuccess
+    }
+
+    private fun writeTextToFileDetailed(fileName: String, content: String): WriteResult {
         val localSuccess = writeLocalCache(fileName, content)
         val accessor = fileAccessor
         val remoteSuccess = if (accessor != null) writeRemoteText(accessor, fileName, content) else false
@@ -458,7 +476,7 @@ object HookPrefs {
         } else if (localSuccess) {
             markPendingSync(fileName, SYNC_OP_UPSERT)
         }
-        return remoteSuccess || localSuccess
+        return WriteResult(localSuccess, remoteSuccess)
     }
 
     private fun deleteConfigFile(fileName: String): Boolean {
@@ -479,6 +497,18 @@ object HookPrefs {
 
     private fun buildFileName(prefix: String, key: String): String {
         return "$prefix$key.json"
+    }
+
+    private fun notifyPackageVisibilityChanged() {
+        runCatching {
+            closeApp.sendBroadcast(
+                Intent(ACTION_UPDATE_PACKAGE_VISIBILITY).apply {
+                    setPackage("android")
+                }
+            )
+        }.onFailure {
+            Log.w(TAG, "Failed to notify package visibility update", it)
+        }
     }
 
     fun getOverallHookEnabled(packageName: String?): Boolean {
@@ -518,6 +548,9 @@ object HookPrefs {
                     }
                     if (writeRemoteText(accessor, fileName, localContent)) {
                         clearPendingSync(fileName)
+                        if (fileName == FILE_GENERAL_SETTINGS) {
+                            notifyPackageVisibilityChanged()
+                        }
                     }
                 }
                 SYNC_OP_DELETE -> {

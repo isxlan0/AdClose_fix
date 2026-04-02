@@ -23,7 +23,7 @@ data class LspApiConfig(
 val buildZoneId: ZoneId = ZoneId.of("Asia/Hong_Kong")
 val buildTimestampFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmm")
 val versionCodeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyDDDHHmm")
-val baseVersionName = "4.2.5"
+val baseVersionName = "4.2.8"
 
 val buildTimestamp = System.getenv("BUILD_TIMESTAMP")
     ?.trim()
