@@ -9,17 +9,10 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import com.close.hook.ads.preference.HookPrefs
+import de.robv.android.xposed.XposedBridge
 import io.github.libxposed.api.XposedInterface
 import java.lang.reflect.Field
 import java.lang.reflect.Method
-
-private fun XposedInterface.logCompat(tag: String, message: String) {
-    log("[$tag] $message")
-}
-
-private fun XposedInterface.logCompat(tag: String, message: String, throwable: Throwable) {
-    log("[$tag] $message\n${Log.getStackTraceString(throwable)}")
-}
 
 object PackageVisibilityHandler {
 
@@ -45,8 +38,12 @@ object PackageVisibilityHandler {
     @Volatile
     private var cachedSystemContext: Context? = null
 
+    private fun log(message: String) {
+        XposedBridge.log("$TAG | $message")
+    }
+
     fun init(xposed: XposedInterface) {
-        xposed.logCompat(TAG, "Initializing package visibility handler")
+        log("Initializing package visibility handler")
 
         Thread {
             var appsFilterInstance: Any? = null
@@ -62,7 +59,7 @@ object PackageVisibilityHandler {
             val updateReceiver = object : BroadcastReceiver() {
                 override fun onReceive(context: Context?, intent: Intent?) {
                     if (intent?.action == ACTION_UPDATE) {
-                        xposed.logCompat(TAG, "Received package visibility update signal")
+                        log("Received package visibility update signal")
                         synchronized(threadWakeLock) {
                             (threadWakeLock as java.lang.Object).notifyAll()
                         }
@@ -87,9 +84,9 @@ object PackageVisibilityHandler {
                                     systemContext.registerReceiver(updateReceiver, filter)
                                 }
                                 isReceiverRegistered = true
-                                xposed.logCompat(TAG, "Registered package visibility update receiver")
+                                log("Registered package visibility update receiver")
                             } catch (e: Throwable) {
-                                xposed.logCompat(TAG, "Failed to register receiver: ${e.message}")
+                                log("Failed to register receiver: ${e.message}")
                             }
                         }
                     }
@@ -111,7 +108,7 @@ object PackageVisibilityHandler {
                                     clearMethod = arraySetClass.getMethod("clear")
                                 }
 
-                                xposed.logCompat(TAG, "Package visibility bypass is ready")
+                                log("Package visibility bypass is ready")
                             }
                         }
 
@@ -144,10 +141,7 @@ object PackageVisibilityHandler {
                                     }
                                 }
                                 lastTargetPackages = targetPackages
-                                xposed.logCompat(
-                                    TAG,
-                                    "Updated package visibility whitelist: ${targetPackages.joinToString()}"
-                                )
+                                log("Updated package visibility whitelist: ${targetPackages.joinToString()}")
                             }
                         }
                     } else if (lastFeatureEnabled != false) {
@@ -160,7 +154,7 @@ object PackageVisibilityHandler {
                                     }
                                 }
                                 lastTargetPackages = emptySet()
-                                xposed.logCompat(TAG, "Package visibility bypass disabled")
+                                log("Package visibility bypass disabled")
                             }
                         }
                     }
@@ -177,7 +171,7 @@ object PackageVisibilityHandler {
                     Thread.currentThread().interrupt()
                     break
                 } catch (e: Throwable) {
-                    xposed.logCompat(TAG, Log.getStackTraceString(e))
+                    log(Log.getStackTraceString(e))
                     if (e is ReflectiveOperationException) {
                         appsFilterInstance = null
                     }
